@@ -7,7 +7,7 @@ Then open: http://localhost:8000
 """
 
 from flask import Flask, request, jsonify, render_template, send_from_directory
-from dotenv import dotenv_values
+from dotenv import load_dotenv
 import threading
 import sys
 import os
@@ -22,9 +22,9 @@ if sys.stdout.encoding != 'utf-8':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 # ── Environment ──────────────────────────────────────────────────────────────
-env_vars = dotenv_values(".env")
-Username      = env_vars.get("Username", "User")
-Assistantname = env_vars.get("Assistantname", "Nemo")
+load_dotenv()
+Username      = os.getenv("Username", "User")
+Assistantname = os.getenv("Assistantname", "Nemo")
 
 # ── File-based status helpers (shared with TTS/backend) ──────────────────────
 current_dir = os.getcwd()
@@ -85,21 +85,13 @@ class MockKeyboard:
 
 # Inject the mock into sys.modules BEFORE any backend modules are imported
 _mock_kb = MockKeyboard()
-sys.modules['keyboard'] = _mock_kb
+sys.modules['keyboard'] = _mock_kb # type: ignore
 _interrupt_flag = _mock_kb._interrupt_flag
 
 # ── NOW import the backend modules ──────────
 from backend.Model import FirstLayerDMM
 from backend.RealtimeSearchEngin import RealtimeSearchEngine
 
-# Inline Automation helpers since importing Automation triggers system dependencies
-WEBSITE_SHORTCUTS = {
-    'youtube': 'https://www.youtube.com',
-    'google': 'https://www.google.com',
-    'github': 'https://www.github.com'
-}
-def _is_url(text): return '.' in text and ' ' not in text
-def _ensure_scheme(url): return url if url.startswith('http') else 'https://' + url
 from backend.Chatbot import ChatBot
 from backend.ImageGeneration import GenerateImages
 
@@ -147,9 +139,11 @@ def index():
 @app.route("/Data/<path:filename>")
 @app.route("/data/<path:filename>")
 def serve_data(filename):
-    # Ensure we use the correct absolute path to the Data folder
     data_folder = os.path.join(current_dir, "Data")
-    return send_from_directory(data_folder, filename)
+    response = send_from_directory(data_folder, filename)
+    # Prevent caching of images so new generations show up instantly
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    return response
 
 
 
@@ -211,59 +205,20 @@ def speak():
                             
                             if idx != -1:
                                 rel_path = abs_img[idx:].replace("\\", "/") # e.g., "Data/img.jpg"
-                                # Add timestamp to bust browser cache
                                 ts = int(time.time())
-                                full_reply += f" I would be absolutely delighted to show you the images I've generated for '{prompt}'! I've put a lot of effort into making them perfect for you. I truly hope they capture exactly what you were imagining! <br><img src='/{rel_path}?v={ts}' style='max-width:100%; max-height: 450px; border-radius:15px; margin-top:15px; border: 2px solid var(--accent); box-shadow: 0 10px 30px rgba(0,0,0,0.5); display:block;' /> "
+                                full_reply += f" I've generated this for you! <br><img src='/{rel_path}?v={ts}' style='max-width:100%; max-height: 450px; border-radius:15px; margin-top:15px; border: 2px solid var(--accent); display:block;' /> "
                             else:
-                                # Fallback if Data folder isn't found in path
                                 filename = os.path.basename(abs_img)
                                 ts = int(time.time())
-                                full_reply += f" I have successfully generated the images for you, {Username}! <br><img src='/Data/{filename}?v={ts}' style='max-width:100%; max-height: 450px; border-radius:15px; margin-top:15px; border: 2px solid var(--accent); box-shadow: 0 10px 30px rgba(0,0,0,0.5); display:block;' /> "
+                                full_reply += f" I've generated this for you! <br><img src='/Data/{filename}?v={ts}' style='max-width:100%; max-height: 450px; border-radius:15px; margin-top:15px; border: 2px solid var(--accent); display:block;' /> "
                         else:
-                            full_reply += f" I've completed the generation process for '{prompt}', {Username}! I am so excited for you to see the results. "
+                            full_reply += f" I've completed the generation for '{prompt}'! "
                     else:
-                        full_reply += f" I am so sorry, {Username}, but it seems I hit a small snag while trying to display the images for '{prompt}'. However, I've done my best to ensure they are being processed properly! "
+                        full_reply += f" snag while displaying the image. "
                 except Exception as e:
                     full_reply += f" I am so sorry, {Username}, but I ran into a tiny snag while creating your images: {e}. "
 
-            # ── Browser-Oriented Automation ──────────────────────────
-            elif any(task.startswith(func) for func in ["open", "play", "google search", "youtube search"]):
-                target = ""
-                url = ""
-                
-                if task.startswith("open "):
-                    target = task.replace("open ", "").strip()
-                    # Check if it's a known website or looks like a URL
-                    if target.lower() in WEBSITE_SHORTCUTS:
-                        url = WEBSITE_SHORTCUTS[target.lower()]
-                    elif _is_url(target):
-                        url = _ensure_scheme(target)
-                    else:
-                        # If it's not a clear website, we treat it as a "search and open"
-                        url = f"https://www.google.com/search?q={target}&btnI=1" # "I'm feeling lucky"
-                
-                elif task.startswith("google search "):
-                    target = task.replace("google search ", "").strip()
-                    url = f"https://www.google.com/search?q={target}"
-                
-                elif task.startswith("youtube search "):
-                    target = task.replace("youtube search ", "").strip()
-                    url = f"https://www.youtube.com/results?search_query={target}"
-                
-                elif task.startswith("play "):
-                    target = task.replace("play ", "").strip()
-                    # Use YouTube search for 'play' in web version
-                    url = f"https://www.youtube.com/results?search_query={target}"
 
-                if url:
-                    action_urls.append(url)
-                    full_reply += f" Opening {target or 'requested page'} in your browser. "
-                else:
-                    full_reply += " I can only open websites and searches in the web version. "
-
-            # ── System tasks (Ignored in Web Version) ────────────────────
-            elif any(task.startswith(func) for func in ["close", "system", "reminder"]):
-                full_reply += f" (System task '{task.split()[0]}' is disabled in the web version to focus on your browser.) "
 
             # ── Realtime search, general chat, or content (writing/code) ──────
             elif any(tag in task for tag in ["realtime", "general", "content"]):
@@ -294,11 +249,12 @@ def speak():
                 # ── Format Code Blocks for the Web UI ──
                 # Convert ```lang ... ``` into a styled div with a copy button
                 def format_code_blocks(text):
-                    code_regex = re.compile(r'```(\w+)?\s*\n(.*?)\n```', re.DOTALL)
+                    # More flexible regex to catch code blocks even without newlines
+                    code_regex = re.compile(r'```(\w+)?\s*(.*?)\s*```', re.DOTALL)
                     
                     def replace_code(match):
-                        lang = match.group(1) or "code"
-                        code = match.group(2).replace('<', '&lt;').replace('>', '&gt;')
+                        lang = (match.group(1) or "code").strip()
+                        code = match.group(2).strip().replace('<', '&lt;').replace('>', '&gt;')
                         block_id = f"code-{int(time.time() * 1000)}"
                         # Constructing HTML without leading indentation spaces to ensure proper alignment
                         html = (

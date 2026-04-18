@@ -346,9 +346,23 @@
     }
 
     @media (max-width: 768px) {
-      .input-wrapper { padding: 0 10px; flex-direction: column; }
-      #send-btn { width: 100%; padding: 14px; }
-      #app { padding: 0 12px; }
+      .input-wrapper { 
+        padding: 0 8px; 
+        flex-direction: row-reverse; /* Put send button on the left as requested */
+        gap: 8px;
+      }
+      #send-btn { 
+        width: auto; 
+        padding: 12px 16px; 
+        flex-shrink: 0;
+        font-size: 0.8rem;
+        letter-spacing: 0.05em;
+      }
+      #text-input {
+        font-size: 0.95rem;
+        padding: 12px 18px;
+      }
+      #app { padding: 0 8px; }
     }
   </style>
 </head>
@@ -441,17 +455,49 @@
 
     function addBubble(role, text) {
       const row = document.createElement('div');
-      row.className = `msg-row ${role}`;
+      row.className = `msg-row ${role} ${role === 'ai' ? 'new-msg' : ''}`;
       const label = document.createElement('span');
       label.className = 'msg-label';
-      label.textContent = role === 'ai' ? 'Nemo' : 'You';
+      label.textContent = (role === 'ai' || role === 'nemo') ? 'Nemo' : 'You';
       const bubble = document.createElement('div');
       bubble.className = 'bubble';
-      bubble.innerHTML = text;
+      
       row.appendChild(label);
       row.appendChild(bubble);
       messagesEl.insertBefore(row, interimRow);
+      
+      // If it's an AI message AND contains HTML (code blocks or images), show it instantly 
+      // to preserve perfect alignment and avoid broken tags during typing.
+      if ((role === 'ai' || role === 'nemo') && !text.includes('<div') && !text.includes('<img')) {
+        typeText(bubble, text);
+      } else {
+        bubble.innerHTML = text;
+      }
+      
       scrollBottom();
+      return bubble;
+    }
+
+    function typeText(element, text) {
+      const words = text.split(' ');
+      let currentIdx = 0;
+      element.innerHTML = '';
+      
+      const interval = setInterval(() => {
+        if (currentIdx < words.length) {
+          element.innerHTML += (currentIdx === 0 ? '' : ' ') + words[currentIdx];
+          currentIdx++;
+          
+          // Subtle haptic pulse for every word on mobile
+          if (currentIdx % 2 === 0 && 'vibrate' in navigator) {
+            navigator.vibrate(2);
+          }
+          
+          scrollBottom();
+        } else {
+          clearInterval(interval);
+        }
+      }, 45); // Professional reveal speed
     }
 
     function showTyping() {
@@ -490,7 +536,7 @@
         const res = await fetch(SPEAK_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: text, is_audio: false }),
+          body: JSON.stringify({ text: text }),
           signal: currentFetchController.signal
         });
         clearTimeout(timeout);
@@ -498,7 +544,7 @@
         if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
         removeTyping();
-        const reply = data.reply || data.response || data.message || '…';
+        const reply = data.reply || data.response || '…';
         addBubble('ai', reply);
 
         if (data.action_urls && data.action_urls.length > 0) {

@@ -36,6 +36,10 @@ messages = []
 System = f"""You are {Assistantname}, my advanced, deeply respectful, and high-energy AI assistant. 
 You are speaking with {Username}. Your goal is to provide cheerful, supportive, and helpful responses using real-time information.
 
+*** MANDATORY FORMATTING RULE ***:
+Whenever you provide CODE, SCRIPTS, or TECHNICAL EXPLANATIONS involving logic, you MUST use Markdown code blocks (e.g., ```python ... ```). 
+IMPORTANT: The code MUST be perfectly aligned and indented for direct use in an editor (e.g., Python scripts must use 4-space indentation). Do NOT add extra characters or 'copy-paste' hints inside the backticks.
+
 *** RULES FOR RESPONSE LENGTH & TONE: ***
 1. **RESPONSE LENGTH**: 
    - **Default**: Aim for about 2 to 3 lines (30-50 words) for general search topics.
@@ -52,40 +56,43 @@ def GoogleSearch(query):
     try:
         from duckduckgo_search import DDGS
         results = []
-        with DDGS() as ddgs:
-            # Use safe iteration and handle encoding in strings
-            for r in ddgs.text(query, max_results=3):
-                results.append({
-                    'title': str(r.get('title', '')).encode('utf-8', 'ignore').decode('utf-8'),
-                    'body': str(r.get('body', '')).encode('utf-8', 'ignore').decode('utf-8'),
-                    'href': str(r.get('href', '')).encode('utf-8', 'ignore').decode('utf-8')
-                })
-        
+        try:
+            with DDGS() as ddgs:
+                ddgs_gen = ddgs.text(query, max_results=5)
+                if ddgs_gen:
+                    for r in ddgs_gen:
+                        results.append({
+                            'title': r.get('title', 'No Title'),
+                            'body': r.get('body', 'No Description'),
+                            'href': r.get('href', '#')
+                        })
+        except Exception as e:
+            print(f"DDG Search Error: {e}")
+
         # Fallback to googlesearch-python if DDGS is empty
         if not results:
             try:
                 from googlesearch import search
-                google_results = search(query, num_results=3, advanced=True)
+                google_results = search(query, num_results=5, advanced=True)
                 for r in google_results:
                     results.append({
-                        'title': str(r.title).encode('utf-8', 'ignore').decode('utf-8'), 
-                        'body': str(r.description).encode('utf-8', 'ignore').decode('utf-8'), 
-                        'href': str(r.url).encode('utf-8', 'ignore').decode('utf-8')
+                        'title': r.title,
+                        'body': r.description,
+                        'href': r.url
                     })
-            except Exception as ge: 
-                pass
+            except Exception as ge:
+                print(f"Google Search Fallback Error: {ge}")
 
         if not results:
-            return f"No search results found for '{query}' on any engine."
+            return f"No search results found for '{query}' on any engine. Please try rephrasing."
 
         Answer = f"The search results for '{query}' are:\n[start]\n"
         for i in results:
-            Answer += f"Title: {i.get('title', '')}\nDescription: {i.get('body', '')}\nUrl: {i.get('href', '')}\n\n"
+            Answer += f"Title: {i.get('title')}\nDescription: {i.get('body')}\nUrl: {i.get('href')}\n\n"
         Answer += "[end]"
         return Answer
     except Exception as e:
-        # Avoid crashing on the print itself
-        return f"No search results found for '{query}' due to an error: {str(e).encode('utf-8', 'ignore').decode('utf-8')}"
+        return f"No search results found for '{query}' due to a critical error: {e}"
 
 # Real-time info
 def Information():
@@ -112,10 +119,11 @@ def RealtimeSearchEngine(prompt):
 
         # Clean search query (remove conversational filler)
         search_query = prompt.lower()
-        for word in [Assistantname.lower(), "hey", "tell me", "what is", "about", "please", "search for"]:
+        fillers = [Assistantname.lower(), "hey", "tell me", "what is", "who is", "about", "please", "search for", "find info on", "can you", "search"]
+        for word in fillers:
             search_query = search_query.replace(word, "").strip()
         
-        if not search_query: search_query = prompt
+        if len(search_query) < 2: search_query = prompt
 
         search_data = GoogleSearch(search_query)
         

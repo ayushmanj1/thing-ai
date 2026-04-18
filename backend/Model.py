@@ -18,9 +18,7 @@ else:
 
 # Define a list of recognized function keywords for task categorization.
 funcs = [
-    "exit", "general", "realtime", "open", "close", "play",
-    "generate image", "system", "content", "google search",
-    "youtube search", "reminder"
+    "exit", "general", "realtime", "generate image", "content"
 ]
 
 # Initialize an empty list to store user messages.
@@ -34,13 +32,7 @@ Your ONLY task is to categorize the user's query into one or more categories.
 -> 'realtime (query)': For ANY factual info, news, weather, prices, or web searches. (PRIORITY)
 -> 'general (query)': For greetings, jokes, personal/emotive chat, or general conversation.
 -> 'content (topic)': For formal writing, code, essays, or long-form applications ONLY.
--> 'open (app/site)': To open applications or websites.
--> 'close (app)': To close applications.
--> 'play (song)': To play music on YouTube.
 -> 'generate image (prompt)': To create images.
--> 'system (task)': For mute, unmute, volume up/down, wifi on/off, airplane mode on/off, battery saver on/off, night light on/off.
--> 'google search (topic)': For manual Google searches.
--> 'youtube search (topic)': For manual YouTube search.
 
 *** MANDATORY RULES: ***
 1. ONLY respond with the tags mentioned above. 
@@ -61,24 +53,22 @@ ChatHistory = [
     {"role": "Chatbot", "message": "realtime who is the current prime minister?"},
     {"role": "User", "message": "tell me a joke"},
     {"role": "Chatbot", "message": "general tell me a joke"},
-    {"role": "User", "message": "open youtube and search for mr beast"},
-    {"role": "Chatbot", "message": "open youtube, youtube search mr beast"},
+    {"role": "User", "message": "what is happening in us iran right now?"},
+    {"role": "Chatbot", "message": "realtime what is happening in us iran right now?"},
+    {"role": "User", "message": "current stock price of nvidia"},
+    {"role": "Chatbot", "message": "realtime current stock price of nvidia"},
     {"role": "User", "message": "i love you so much"},
     {"role": "Chatbot", "message": "general i love you so much"},
     {"role": "User", "message": "is it raining in london?"},
     {"role": "Chatbot", "message": "realtime is it raining in london?"},
-    {"role": "User", "message": "who is elon musk?"},
-    {"role": "Chatbot", "message": "realtime who is elon musk?"},
+    {"role": "User", "message": "give me a python code for bubble sort"},
+    {"role": "Chatbot", "message": "content give me a python code for bubble sort"},
+    {"role": "User", "message": "explain how a convolutional neural network works"},
+    {"role": "Chatbot", "message": "content explain how a convolutional neural network works"},
     {"role": "User", "message": "write a leave application for school"},
     {"role": "Chatbot", "message": "content write a leave application for school"},
-    {"role": "User", "message": "turn on the wifi"},
-    {"role": "Chatbot", "message": "system wifi on"},
-    {"role": "User", "message": "turn off airplane mode"},
-    {"role": "Chatbot", "message": "system airplane mode off"},
-    {"role": "User", "message": "enable battery saver"},
-    {"role": "Chatbot", "message": "system battery saver on"},
-    {"role": "User", "message": "turn on night light"},
-    {"role": "Chatbot", "message": "system night light on"}
+    {"role": "User", "message": "generate a picture of a futuristic city"},
+    {"role": "Chatbot", "message": "generate image a futuristic city"}
 ]
 
 # Define the main function for decision-making on queries.
