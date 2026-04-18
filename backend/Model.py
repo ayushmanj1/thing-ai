@@ -63,12 +63,14 @@ ChatHistory = [
     {"role": "Chatbot", "message": "realtime is it raining in london?"},
     {"role": "User", "message": "give me a python code for bubble sort"},
     {"role": "Chatbot", "message": "content give me a python code for bubble sort"},
+    {"role": "User", "message": "what is the format of a formal letter?"},
+    {"role": "Chatbot", "message": "general what is the format of a formal letter?"},
+    {"role": "User", "message": "tell me the format for a notice for school assembly"},
+    {"role": "Chatbot", "message": "general tell me the format for a notice for school assembly"},
     {"role": "User", "message": "explain how a convolutional neural network works"},
     {"role": "Chatbot", "message": "content explain how a convolutional neural network works"},
     {"role": "User", "message": "write a leave application for school"},
-    {"role": "Chatbot", "message": "content write a leave application for school"},
-    {"role": "User", "message": "generate a picture of a futuristic city"},
-    {"role": "Chatbot", "message": "generate image a futuristic city"}
+    {"role": "Chatbot", "message": "content write a leave application for school"}
 ]
 
 # Define the main function for decision-making on queries.
