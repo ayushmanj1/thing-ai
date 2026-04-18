@@ -148,19 +148,13 @@ async def save_image(img_bytes, prompt_safe, index, data_dir):
     return filepath
 
 
-async def generate_images(prompt: str):
+async def generate_images(prompt: str) -> str | None:
     SetAssistantStatus("Generating Image...")
     prompt_safe = "".join(x for x in prompt if x.isalnum() or x in " _-").strip().replace(" ", "_")
     data_dir = os.path.join(base_dir, "Data")
     os.makedirs(data_dir, exist_ok=True)
     
-    success_count = 0
-    saved_paths = []
-
-    # ── Strategy 1: Pollinations.ai (Multiple Models in Parallel) ───────────
-    SetAssistantStatus("Launching parallel generation...")
-    
-    # We'll try several models at once and take the first two that succeed
+    # ── Strategy 1: Pollinations.ai ─────────────────
     model_configs = [
         ("flux", 768, 768, random.randint(1, 100000)),
         ("turbo", 512, 512, random.randint(1, 100000)),
@@ -173,49 +167,30 @@ async def generate_images(prompt: str):
         for m, w, h, s in model_configs
     ]
     
-    # Wait for any to finish. We'll check as they come in.
     results = await asyncio.gather(*tasks, return_exceptions=True)
-    
     valid_results = [r for r in results if isinstance(r, bytes) and r]
     
     if valid_results:
-        # Save up to 2 best results
-        save_tasks = []
-        for i, img_bytes in enumerate(valid_results[:2]):
-            save_tasks.append(save_image(img_bytes, prompt_safe, success_count + i + 1, data_dir))
-        
-        await asyncio.gather(*save_tasks)
+        # Save only the first successful one for the web response return
+        filepath = await save_image(valid_results[0], prompt_safe, random.randint(1, 999), data_dir)
         SetAssistantStatus("Image Generated!")
-        return  # Done
+        return filepath
 
-    # ── Strategy 2: HuggingFace (fallback, may require paid plan) ────────────
-    if success_count == 0:
-        SetAssistantStatus("Trying HuggingFace...")
-        hf_models = [
-            "stabilityai/stable-diffusion-xl-base-1.0",
-            "runwayml/stable-diffusion-v1-5",
-            "CompVis/stable-diffusion-v1-4",
-        ]
-        payload = {"inputs": prompt, "options": {"wait_for_model": True}}
-        for model in hf_models:
-            short = model.split("/")[-1]
-            SetAssistantStatus(f"Trying {short}...")
-            img_bytes = await query_huggingface(model, payload)
-            if img_bytes:
-                filepath = os.path.join(data_dir, f"{prompt_safe}1.jpg")
-                with open(filepath, "wb") as f:
-                    f.write(img_bytes)
-                SetAssistantStatus("Image Generated!")
-                AppendImageToChat(filepath)
-                open_images(prompt)
-                return
+    # ── Strategy 2: HuggingFace ────────────────────
+    hf_models = ["stabilityai/stable-diffusion-xl-base-1.0", "runwayml/stable-diffusion-v1-5"]
+    payload = {"inputs": prompt, "options": {"wait_for_model": True}}
+    for model in hf_models:
+        img_bytes = await query_huggingface(model, payload)
+        if img_bytes:
+            filepath = await save_image(img_bytes, prompt_safe, random.randint(1, 999), data_dir)
+            SetAssistantStatus("Image Generated!")
+            return filepath
 
-    if success_count == 0:
-        SetAssistantStatus("Generation Failed.")
-        print("All image generation strategies failed.")
+    SetAssistantStatus("Generation Failed.")
+    return None
 
-def GenerateImages(prompt: str):
-    asyncio.run(generate_images(prompt))
+def GenerateImages(prompt: str) -> str | None:
+    return asyncio.run(generate_images(prompt))
 
 if __name__ == "__main__":
     trigger_file = os.path.join(base_dir, "Frontend", "Files", "ImageGeneration.data")

@@ -2,25 +2,21 @@ import os
 import sys
 import datetime
 import io
-from json import load, dump
 from dotenv import load_dotenv
-import os
 from groq import Groq
 import cohere
 import warnings
 
-
-# Force UTF-8 encoding for standard output to handle symbols like the Rupee sign
+# Force UTF-8 encoding
 if sys.stdout.encoding != 'utf-8':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
-# Suppress warnings
 warnings.filterwarnings("ignore")
 
 # Load environment variables
 load_dotenv(override=True)
 
-Username = os.getenv("Username", "User")
+DefaultUsername = os.getenv("Username", "User")
 Assistantname = os.getenv("Assistantname", "Nemo")
 GroqAPIKey = os.getenv("GroqAPIKey")
 CohereAPIKey = os.getenv("CohereAPIKey")
@@ -29,11 +25,9 @@ CohereAPIKey = os.getenv("CohereAPIKey")
 client = Groq(api_key=GroqAPIKey)
 co_client = cohere.Client(api_key=CohereAPIKey)
 
-from backend.Chatbot import messages
-
-# System prompt
-System = f"""You are {Assistantname}, my advanced, deeply respectful, and high-energy AI assistant. 
-You are speaking with {Username}. Your goal is to provide cheerful, supportive, and helpful responses using real-time information.
+def GetSystemMessage(user_name=DefaultUsername):
+    return f"""You are {Assistantname}, my advanced, deeply respectful, and high-energy AI assistant. 
+You are speaking with {user_name}. Your goal is to provide cheerful, supportive, and helpful responses using real-time information.
 
 *** MANDATORY FORMATTING RULE ***:
 - ONLY use Markdown code blocks (triple backticks) for COMPUTER PROGRAMMING CODES (e.g., Python, C++, HTML/CSS, etc.). 
@@ -59,7 +53,6 @@ def GoogleSearch(query):
         results = []
         try:
             with DDGS() as ddgs:
-                # Use keywords for clarity and the new 'text' method signature
                 ddgs_gen = ddgs.text(keywords=query, max_results=5)
                 if ddgs_gen:
                     for r in ddgs_gen:
@@ -71,12 +64,10 @@ def GoogleSearch(query):
         except Exception as e:
             print(f"[GoogleSearch] DDG Search Error: {e}")
 
-        # Fallback to googlesearch-python if DDGS is empty
         if not results:
             print(f"[GoogleSearch] DDG returned no results, trying Google fallback...")
             try:
                 from googlesearch import search
-                # Explicitly cast search results to list
                 google_results = list(search(query, num_results=5, advanced=True))
                 for r in google_results:
                     results.append({
@@ -88,17 +79,14 @@ def GoogleSearch(query):
                 print(f"[GoogleSearch] Google Search Fallback Error: {ge}")
 
         if not results:
-            print(f"[GoogleSearch] All search engines failed for: {query}")
-            return f"No search results found for '{query}'. Please try rephrasing or check connectivity."
+            return f"No search results found for '{query}'."
 
-        print(f"[GoogleSearch] Found {len(results)} results.")
         Answer = f"The search results for '{query}' are:\n[start]\n"
         for i in results:
             Answer += f"Title: {i.get('title')}\nDescription: {i.get('body')}\nUrl: {i.get('href')}\n\n"
         Answer += "[end]"
         return Answer
     except Exception as e:
-        print(f"[GoogleSearch] Critical error in GoogleSearch function: {e}")
         return f"I encountered a search error: {e}"
 
 # Real-time info
@@ -107,15 +95,16 @@ def Information():
     return f"Time: {now.strftime('%H:%M:%S')}\nDate: {now.strftime('%d/%m/%Y')}\nDay: {now.strftime('%A')}\n"
 
 # Main Engine
-def RealtimeSearchEngine(prompt):
-    # Using 'messages' imported from backend.Chatbot for shared RAM storage
-    global messages
+def RealtimeSearchEngine(prompt, provided_messages=None, user_name=None):
+    if provided_messages is None:
+        provided_messages = []
+    if user_name is None:
+        user_name = DefaultUsername
 
     Answer = ""
     search_context = ""
 
     try:
-        # Clean search query (remove conversational filler)
         search_query = prompt.lower()
         fillers = [Assistantname.lower(), "hey", "tell me", "what is", "who is", "about", "please", "search for", "find info on", "can you", "search"]
         for word in fillers:
@@ -124,14 +113,13 @@ def RealtimeSearchEngine(prompt):
         if len(search_query) < 2: search_query = prompt
 
         search_data = GoogleSearch(search_query)
-        
-        # Format search context prominently
         search_context = f"REAL-TIME SEARCH RESULTS (As of {Information()}):\n{search_data}\n\nIMPORTANT: Use the above search results to provide a current and factual answer."
         
-        combined_system_prompt = System + "\n" + search_context
+        system_content = GetSystemMessage(user_name)
+        combined_system_prompt = system_content + "\n" + search_context
         messages_to_send = [
             {"role": "system", "content": combined_system_prompt},
-        ] + messages[-5:] + [
+        ] + provided_messages[-5:] + [
             {"role": "user", "content": prompt}
         ]
 
@@ -165,13 +153,11 @@ def RealtimeSearchEngine(prompt):
                             Answer += chunk.choices[0].delta.content
                             yield Answer
                 except Exception as e2:
-                    # Final Fallback to Cohere if 8B also fails
-                    for text in FallbackToCohere(prompt, search_context):
+                    for text in FallbackToCohere(prompt, search_context, user_name):
                         Answer = text
                         yield Answer
             else:
-                # Fallback to Cohere for other Groq errors
-                for text in FallbackToCohere(prompt, search_context):
+                for text in FallbackToCohere(prompt, search_context, user_name):
                     Answer = text
                     yield Answer
 
@@ -179,16 +165,16 @@ def RealtimeSearchEngine(prompt):
         print(f"Critical Error: {e}")
         yield f"Error: {e}"
 
-    # Save interaction to RAM shared with Chatbot
     if Answer:
-        messages.append({"role": "user", "content": prompt})
-        messages.append({"role": "assistant", "content": Answer})
+        provided_messages.append({"role": "user", "content": prompt})
+        provided_messages.append({"role": "assistant", "content": Answer})
 
-def FallbackToCohere(prompt, search_context):
+def FallbackToCohere(prompt, search_context, user_name):
     full_text = ""
     try:
         print(f"Groq Failed, falling back to Cohere...")
-        combined_content = f"{System}\n{search_context}"
+        system_content = GetSystemMessage(user_name)
+        combined_content = f"{system_content}\n{search_context}"
         stream = co_client.chat_stream(
             model="command-r-plus-08-2024",
             message=prompt,
@@ -196,12 +182,10 @@ def FallbackToCohere(prompt, search_context):
             connectors=[]
         )
         for event in stream:
-            pass
             if event.event_type == "text-generation":
                 full_text += event.text
                 yield full_text
     except Exception as final_e:
-        print(f"All Models Failed: {final_e}")
         yield f"Error: {final_e}"
 
 # Run program

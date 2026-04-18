@@ -1,15 +1,13 @@
 import os
 from groq import Groq
 import cohere
-from json import load, dump
 import datetime
 from dotenv import load_dotenv
-
 
 # Load environment variables
 load_dotenv(override=True)
 
-Username = os.getenv("Username", "User")
+DefaultUsername = os.getenv("Username", "User")
 Assistantname = os.getenv("Assistantname", "Nemo")
 GroqAPIKey = os.getenv("GroqAPIKey")
 CohereAPIKey = os.getenv("CohereAPIKey")
@@ -18,12 +16,9 @@ CohereAPIKey = os.getenv("CohereAPIKey")
 client = Groq(api_key=GroqAPIKey)
 co_client = cohere.Client(api_key=CohereAPIKey)
 
-# Global messages list
-messages = []
-
-# System message
-System = f"""
-Hello, I am {Username}, 
+def GetSystemMessage(user_name=DefaultUsername):
+    return f"""
+Hello, I am {user_name}, 
 You are {Assistantname}, my advanced, respectful, and high-energy AI assistant. 
 
 *** MANDATORY FORMATTING RULE ***:
@@ -42,22 +37,22 @@ You are {Assistantname}, my advanced, respectful, and high-energy AI assistant.
 5. **RESTRICTIONS**: Reply in English only. Do not mention your training data or AI nature unless asked.
 """
 
-SystemChatBot = [
-    {"role": "system", "content": System}
-]
-
 # Real-time date & time
 def RealtimeInformation():
     now = datetime.datetime.now()
     return f"Day: {now.strftime('%A')}\nDate: {now.strftime('%d/%m/%Y')}\nTime: {now.strftime('%H:%M:%S')}\n"
 
 # Main chatbot function
-def ChatBot(Query):
-    global messages
+def ChatBot(Query, provided_messages=None, user_name=None):
+    if provided_messages is None:
+        provided_messages = []
+    if user_name is None:
+        user_name = DefaultUsername
 
     try:
-        combined_system_prompt = SystemChatBot[0]["content"] + "\n" + RealtimeInformation()
-        messages_to_send = [{"role": "system", "content": combined_system_prompt}] + messages[-5:] + [{"role": "user", "content": Query}]
+        system_content = GetSystemMessage(user_name)
+        combined_system_prompt = system_content + "\n" + RealtimeInformation()
+        messages_to_send = [{"role": "system", "content": combined_system_prompt}] + provided_messages[-5:] + [{"role": "user", "content": Query}]
 
         Answer = ""
 
@@ -99,7 +94,7 @@ def ChatBot(Query):
             stream = co_client.chat_stream(
                 model="command-r-plus-08-2024",
                 message=Query,
-                preamble=System + "\n" + RealtimeInformation(),
+                preamble=GetSystemMessage(user_name) + "\n" + RealtimeInformation(),
                 connectors=[]
             )
             Answer = ""
@@ -111,14 +106,15 @@ def ChatBot(Query):
             print(f"All Models Failed: {final_e}")
             yield f"Error: {final_e}"
 
-    # Save interaction to RAM
+    # Save interaction to logic outside this generator if needed, 
+    # but for compatibility, we update the passed list.
     if Answer:
-        messages.append({"role": "user", "content": Query})
-        messages.append({"role": "assistant", "content": Answer})
+        provided_messages.append({"role": "user", "content": Query})
+        provided_messages.append({"role": "assistant", "content": Answer})
 
-def ClearChatHistory():
-    global messages
-    messages.clear()
+def ClearChatHistory(provided_messages=None):
+    if provided_messages is not None:
+        provided_messages.clear()
 
 
 # Run program

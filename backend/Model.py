@@ -21,9 +21,6 @@ funcs = [
     "exit", "general", "realtime", "generate image", "content"
 ]
 
-# Initialize an empty list to store user messages.
-messages = []
-
 # Define the preamble that guides the AI model on how to categorize queries.
 preamble = """You are a highly accurate Decision-Making Model. 
 Your ONLY task is to categorize the user's query into one or more categories.

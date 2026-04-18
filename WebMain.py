@@ -6,7 +6,7 @@ Run with:  python WebMain.py
 Then open: http://localhost:8000
 """
 
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, request, jsonify, render_template, send_from_directory, session
 from dotenv import load_dotenv
 import threading
 import sys
@@ -14,7 +14,7 @@ import os
 import re
 import io
 import time
-
+import uuid
 import traceback
 
 # ── Force UTF-8 ──────────────────────────────────────────────────────────────
@@ -23,10 +23,10 @@ if sys.stdout.encoding != 'utf-8':
 
 # ── Environment ──────────────────────────────────────────────────────────────
 load_dotenv(override=True)
-Username      = os.getenv("Username", "User")
+DefaultUsername      = os.getenv("Username", "User")
 Assistantname = os.getenv("Assistantname", "Nemo")
 
-# ── File-based status helpers (shared with TTS/backend) ──────────────────────
+# ── File-based status helpers (legacy, kept for minimal changes) ──────────────
 current_dir = os.getcwd()
 TempDirPath = os.path.join(current_dir, "Frontend", "Files")
 
@@ -34,61 +34,29 @@ TempDirPath = os.path.join(current_dir, "Frontend", "Files")
 os.makedirs(TempDirPath, exist_ok=True)
 os.makedirs(os.path.join(current_dir, "Data"), exist_ok=True)
 
-def _write(filename, content):
-    """Write content to a file in the TempDir."""
-    with open(os.path.join(TempDirPath, filename), "w", encoding="utf-8") as f:
-        f.write(content)
-
-
-def _read(filename, default=""):
-    """Read content from a file in the TempDir."""
-    try:
-        with open(os.path.join(TempDirPath, filename), "r", encoding="utf-8") as f:
-            return f.read().strip()
-    except (FileNotFoundError, IOError):
-        return default
-
-
-def set_stop_status(s):
-    """Update stop status."""
-    _write("Stop.data", s)
-
-
-def get_stop_status():
-    """Retrieve stop status."""
-    return _read("Stop.data", "False")
-
-
-
-
-# ── Initialize data files ────────────────────────────────────────────────────
-for fname, default in [("Stop.data", "False"), ("Responses.data", "")]:
-    path = os.path.join(TempDirPath, fname)
-    if not os.path.exists(path):
-        _write(fname, default)
-
-# ── Mock keyboard module to prevent crashes in headless/cloud environments ───────
-# The backend modules import `keyboard` which requires root on Linux.
-# We mock it completely to avoid the import error and handle interrupts cleanly.
-class MockKeyboard:
-    def __init__(self):
-        self._interrupt_flag = threading.Event()
-    def is_pressed(self, key):
-        if key == 'w':
-            return self._interrupt_flag.is_set()
-        return False
-
-# Inject the mock into sys.modules BEFORE any backend modules are imported
-_mock_kb = MockKeyboard()
-sys.modules['keyboard'] = _mock_kb # type: ignore
-_interrupt_flag = _mock_kb._interrupt_flag
-
 # ── NOW import the backend modules ──────────
 from backend.Model import FirstLayerDMM
 from backend.RealtimeSearchEngin import RealtimeSearchEngine
-
 from backend.Chatbot import ChatBot, ClearChatHistory
 from backend.ImageGeneration import GenerateImages
+
+# ── Session Data Store (RAM-based) ───────────────────────────────────────────
+# In a production environment with multiple Render workers, Redis would be better.
+# For now, we use a global dictionary keyed by session ID.
+SESSION_DATA = {}
+
+def get_session_id():
+    if 'uid' not in session:
+        session['uid'] = str(uuid.uuid4())
+    uid = session['uid']
+    if uid not in SESSION_DATA:
+        SESSION_DATA[uid] = {
+            "history": [],
+            "interrupt_flag": threading.Event(),
+            "username": DefaultUsername,
+            "last_interaction": time.time()
+        }
+    return uid
 
 # ── Query modifier ───────────────────────────────────────────────────────────
 def QueryModifier(Query):
@@ -112,21 +80,18 @@ def QueryModifier(Query):
     return new_query.capitalize()
 
 
-
-# Remove lock to prevent "Heavily Processing" errors
-# _processing_lock = threading.Lock()
-
 # ── Flask app ────────────────────────────────────────────────────────────────
 app = Flask(__name__, template_folder="templates")
+app.secret_key = os.getenv("SECRET_KEY", "nemo_ai_session_secret_key_9918")
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 
 @app.route("/")
 def index():
-    # Clear chat history on refresh for user privacy
-    ClearChatHistory()
+    uid = get_session_id()
+    # Optional: Clear history only if user explicitly clicks clear
+    # ClearChatHistory(SESSION_DATA[uid]["history"])
     
-    # no_cache headers so browser always gets fresh HTML
     response = app.make_response(render_template("index.html"))
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
@@ -135,7 +100,8 @@ def index():
 
 @app.route("/clear", methods=["POST"])
 def clear_chat():
-    ClearChatHistory()
+    uid = get_session_id()
+    ClearChatHistory(SESSION_DATA[uid]["history"])
     return jsonify(status="success", message="Chat history cleared from RAM"), 200
 
 
@@ -144,30 +110,37 @@ def clear_chat():
 def serve_data(filename):
     data_folder = os.path.join(current_dir, "Data")
     response = send_from_directory(data_folder, filename)
-    # Prevent caching of images so new generations show up instantly
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     return response
-
 
 
 # ── POST /speak ──────────────────────────────────────────────────────────────
 @app.route("/speak", methods=["POST"])
 def speak():
+    uid = get_session_id()
+    user_state = SESSION_DATA[uid]
+    interrupt_flag = user_state["interrupt_flag"]
+    history = user_state["history"]
+    username = user_state["username"]
+
     data = request.get_json(force=True)
     user_text = (data.get("text") or "").strip()
     if not user_text:
         return jsonify(reply="I didn't catch that.", duration_ms=1500), 200
 
-    # Clear any previous interrupt and ensure we have a fresh start
-    _interrupt_flag.clear()
-    set_stop_status("False")
+    # Handle name introduction (AI remembering user identity)
+    # Simple heuristic: "my name is Ayush" or "I am Rahul"
+    name_match = re.search(r"(?:my name is|i am|call me)\s+([a-zA-Z]+)", user_text.lower())
+    if name_match:
+        new_name = name_match.group(1).capitalize()
+        user_state["username"] = new_name
+        username = new_name
 
-
+    interrupt_flag.clear()
 
     try:
-
         print(f"\n{'─'*50}")
-        print(f"[WebMain] User: {user_text}")
+        print(f"[WebMain] User ({username}): {user_text}")
 
         # ── 1. Decision layer ────────────────────────────────────────────
         try:
@@ -182,7 +155,7 @@ def speak():
         action_urls = []
 
         for task in Decision:
-            if _interrupt_flag.is_set():
+            if interrupt_flag.is_set():
                 break
 
             # ── Image generation ─────────────────────────────────────────
@@ -190,38 +163,25 @@ def speak():
                 prompt = task.replace("generate image", "").strip()
                 full_reply += f"Here are the images for '{prompt}': "
                 try:
-                    img_data_path = os.path.join(current_dir, "Frontend", "Files", "ImageGeneration.data")
-                    # Clear any old results
-                    resp_path = os.path.join(current_dir, "Frontend", "Files", "Responses.data")
-                    if os.path.exists(resp_path): os.remove(resp_path)
+                    # Direct return value ensures thread-safety for multi-user requests
+                    abs_img = GenerateImages(prompt)
                     
-                    # Direct call is much faster than subprocess
-                    GenerateImages(prompt)
-                    
-                    if os.path.exists(resp_path):
-                        with open(resp_path, "r", encoding="utf-8") as rf:
-                            resp_content = rf.read().strip()
-                        if resp_content.startswith("IMAGE:"):
-                            abs_img = resp_content.replace("IMAGE:", "").strip()
-                            idx = abs_img.lower().rfind("data\\")
-                            if idx == -1: idx = abs_img.lower().rfind("data/")
-                            
-                            if idx != -1:
-                                rel_path = abs_img[idx:].replace("\\", "/") # e.g., "Data/img.jpg"
-                                ts = int(time.time())
-                                full_reply += f" I've generated this for you! <br><img src='/{rel_path}?v={ts}' style='max-width:100%; max-height: 450px; border-radius:15px; margin-top:15px; border: 2px solid var(--accent); display:block;' /> "
-                            else:
-                                filename = os.path.basename(abs_img)
-                                ts = int(time.time())
-                                full_reply += f" I've generated this for you! <br><img src='/Data/{filename}?v={ts}' style='max-width:100%; max-height: 450px; border-radius:15px; margin-top:15px; border: 2px solid var(--accent); display:block;' /> "
+                    if abs_img and os.path.exists(abs_img):
+                        idx = abs_img.lower().rfind("data\\")
+                        if idx == -1: idx = abs_img.lower().rfind("data/")
+                        
+                        if idx != -1:
+                            rel_path = abs_img[idx:].replace("\\", "/") 
+                            ts = int(time.time())
+                            full_reply += f" I've generated this for you! <br><img src='/{rel_path}?v={ts}' style='max-width:100%; max-height: 450px; border-radius:15px; margin-top:15px; border: 2px solid var(--accent); display:block;' /> "
                         else:
-                            full_reply += f" I've completed the generation for '{prompt}'! "
+                            filename = os.path.basename(abs_img)
+                            ts = int(time.time())
+                            full_reply += f" I've generated this for you! <br><img src='/Data/{filename}?v={ts}' style='max-width:100%; max-height: 450px; border-radius:15px; margin-top:15px; border: 2px solid var(--accent); display:block;' /> "
                     else:
-                        full_reply += f" snag while displaying the image. "
+                        full_reply += f" I am so sorry, but I ran into a snag while generating your image. "
                 except Exception as e:
-                    full_reply += f" I am so sorry, {Username}, but I ran into a tiny snag while creating your images: {e}. "
-
-
+                    full_reply += f" I am so sorry, {username}, but I ran into a tiny snag while creating your images: {e}. "
 
             # ── Realtime search, general chat, or content (writing/code) ──────
             elif any(tag in task for tag in ["realtime", "general", "content"]):
@@ -229,102 +189,75 @@ def speak():
                 modified_query = QueryModifier(clean_query)
 
                 if "realtime" in task:
-                    print(f"[WebMain] → RealtimeSearchEngine: {modified_query}")
-                    generator = RealtimeSearchEngine(modified_query)
+                    print(f"[WebMain] → RealtimeSearchEngine (User: {username})")
+                    generator = RealtimeSearchEngine(modified_query, provided_messages=history, user_name=username)
                 else:
-                    # ChatBot handles both general and content/code
-                    print(f"[WebMain] → ChatBot: {modified_query}")
-                    generator = ChatBot(modified_query)
+                    print(f"[WebMain] → ChatBot (User: {username})")
+                    generator = ChatBot(modified_query, provided_messages=history, user_name=username)
 
-                # Consume the streaming generator to get the final answer
                 answer = ""
                 try:
                     for chunk in generator:
-                        if _interrupt_flag.is_set():
+                        if interrupt_flag.is_set():
                             break
                         answer = chunk
                 except Exception as e:
                     print(f"[WebMain] Generator error: {e}")
-                    traceback.print_exc()
                     if not answer:
                         answer = f"Sorry, I encountered an error: {e}"
 
-                # ── Format Code Blocks for the Web UI ──
-                # Convert ```lang ... ``` into a styled div with a copy button
+                # ── Format Code Blocks ──
                 def format_code_blocks(text):
-                    # More flexible regex to catch code blocks even without newlines
                     code_regex = re.compile(r'```(\w+)?\s*(.*?)\s*```', re.DOTALL)
-                    
                     def replace_code(match):
                         lang = (match.group(1) or "code").strip()
                         code = match.group(2).strip().replace('<', '&lt;').replace('>', '&gt;')
                         block_id = f"code-{int(time.time() * 1000)}"
-                        # Constructing HTML without leading indentation spaces to ensure proper alignment
-                        html = (
+                        return (
                             f'<div class="code-container">'
-                            f'<div class="code-header">'
-                            f'<span>{lang}</span>'
-                            f'<button class="copy-btn" onclick="copyCode(this)">'
-                            f'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>'
-                            f' Copy</button></div>'
-                            f'<pre><code id="{block_id}">{code}</code></pre>'
-                            f'</div>'
+                            f'<div class="code-header"><span>{lang}</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>'
+                            f'<pre><code id="{block_id}">{code}</code></pre></div>'
                         )
-                        return html
-                    
-                    # First, extract and format code blocks
                     formatted_text = code_regex.sub(replace_code, text)
-                    
-                    # If it's NOT a code block, preserve line breaks for proper alignment
-                    # We split by our added tags to avoid double-processing the code content
                     parts = re.split(r'(<div class="code-container">.*?</div>)', formatted_text, flags=re.DOTALL)
                     final_parts = []
                     for p in parts:
                         if not p.startswith('<div class="code-container">'):
-                            # Process only the text parts
                             final_parts.append(p.replace('\n', '<br>'))
                         else:
                             final_parts.append(p)
-                    
                     return "".join(final_parts)
 
                 full_reply += format_code_blocks(answer)
 
-            # ── Exit ─────────────────────────────────────────────────────
             elif "exit" in task:
                 full_reply += "Goodbye!"
 
         if not full_reply:
-            full_reply = f"I am so sorry, {Username}, but I missed that! I would be absolutely delighted if you could repeat it for me."
+            full_reply = f"I am so sorry, {username}, but I missed that! I would be absolutely delighted if you could repeat it for me."
         elif "Goodbye" in full_reply and len(full_reply.split()) < 10:
              full_reply = f"{full_reply} It has been a wonderful experience assisting you. I hope you have a fantastic day ahead!"
 
         duration_ms = max(2000, len(full_reply) * 60)
-
-        print(f"[WebMain] Reply ({len(full_reply)} chars): {full_reply[:200]}")
+        print(f"[WebMain] Reply ({len(full_reply)} chars): {full_reply[:100]}...")
         print(f"{'─'*50}")
         return jsonify(reply=full_reply, duration_ms=duration_ms, action_urls=action_urls), 200
 
     except Exception as e:
         print(f"[WebMain] CRITICAL ERROR: {e}")
         traceback.print_exc()
-        return jsonify(reply=f"I'm so sorry, but I encountered a small technical hiccup while processing your request. Could you please try asking again?", duration_ms=3000), 200
+        return jsonify(reply=f"I'm so sorry, but I encountered a small technical hiccup. Could you please try again?"), 200
 
 # ── POST /interrupt ──────────────────────────────────────────────────────────
 @app.route("/interrupt", methods=["POST"])
 def interrupt():
-    """Handle user interrupt requests."""
-    print("[WebMain] ⚡ Interrupt received")
-    _interrupt_flag.set()
-    set_stop_status("True")
-
+    uid = get_session_id()
+    print(f"[WebMain] ⚡ Interrupt received for {uid}")
+    SESSION_DATA[uid]["interrupt_flag"].set()
     return jsonify(status="interrupted"), 200
 
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
-    print(f"\n{'='*50}")
-    print(f"  Nemo AI — Cloud Web Interface Started")
-    print(f"  Running on port {port}")
-    print(f"{'='*50}\n")
+    print(f"Nemo AI — Cloud Web Interface Started on port {port}")
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
