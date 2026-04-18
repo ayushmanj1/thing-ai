@@ -1,0 +1,13 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.vscode/
+
+# Ignore local temporary/persistent data since Render filesystem is ephemeral
+Data/
+Frontend/Files/
+scratch/
+DataVoice.html
+*.data
+*.json

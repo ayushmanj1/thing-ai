@@ -1,0 +1,11 @@
+flask
+python-dotenv
+groq
+cohere
+googlesearch-python
+duckduckgo-search
+bs4
+pillow
+rich
+requests
+mtranslate
