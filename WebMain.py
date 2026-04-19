@@ -101,8 +101,10 @@ def index():
 @app.route("/clear", methods=["POST"])
 def clear_chat():
     uid = get_session_id()
-    ClearChatHistory(SESSION_DATA[uid]["history"])
-    return jsonify(status="success", message="Chat history cleared from RAM"), 200
+    # Clear both history and reset username to default
+    SESSION_DATA[uid]["history"].clear()
+    SESSION_DATA[uid]["username"] = DefaultUsername
+    return jsonify(status="success", message="Chat history and identity cleared"), 200
 
 
 @app.route("/Data/<path:filename>")
@@ -122,6 +124,22 @@ def speak():
     interrupt_flag = user_state["interrupt_flag"]
     history = user_state["history"]
     username = user_state["username"]
+
+    # --- SAFETY CHECK: Force reset if stuck on old persona ---
+    bad_phrases = ["supreme leader", "supream leader", "ayushman"]
+    if any(phrase in username.lower() for phrase in bad_phrases):
+        if DefaultUsername.lower() not in ["supreme leader ayushman", "ayushman"]:
+            user_state["username"] = DefaultUsername
+            username = DefaultUsername
+            # Also clean history of these bad phrases to prevent context carryover
+            new_history = []
+            for msg in history:
+                content = msg["content"]
+                for phrase in ["Supreme Leader Ayushman", "Supream Leader Ayushman", "Supreme Leader", "Supream Leader"]:
+                    content = content.replace(phrase, username)
+                new_history.append({"role": msg["role"], "content": content})
+            user_state["history"] = new_history
+            history = new_history
 
     data = request.get_json(force=True)
     user_text = (data.get("text") or "").strip()

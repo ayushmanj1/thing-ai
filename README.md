@@ -1,6 +1,6 @@
 # Thing AI
 
-Thing is a powerful, lightweight, text-only AI assistant designed for headless cloud deployment. It features real-time web search capabilities and an aesthetic, high-energy web interface.
+Thing AI is a powerful, lightweight, text-only AI assistant designed for headless cloud deployment. It features real-time web search capabilities and an aesthetic, high-energy web interface.
 
 ## ✨ Features
 - **Real-time Search**: Powered by DuckDuckGo and Google Search for up-to-the-minute information.
@@ -22,10 +22,10 @@ Thing is a powerful, lightweight, text-only AI assistant designed for headless c
    ```
 3. Create a `.env` file in the root directory:
    ```env
-   GROQ_API_KEY=your_key_here
-   COHERE_API_KEY=your_key_here
-   Username=YourName
-   Assistantname=Thing
+   GroqAPIKey=your_key_here
+   CohereAPIKey=your_key_here
+   Username=User
+   Assistantname=Thing AI
    ```
 4. Run the application:
    ```bash

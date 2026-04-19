@@ -22,7 +22,10 @@ funcs = [
 ]
 
 # Define the preamble that guides the AI model on how to categorize queries.
-preamble = """You are a highly accurate Decision-Making Model. 
+# Load assistant name for categorization layer
+Assistantname = os.getenv("Assistantname", "Thing")
+
+preamble = f"""You are a highly accurate Decision-Making Model for {Assistantname}. 
 Your ONLY task is to categorize the user's query into one or more categories.
 
 *** CATEGORY LIST: ***
@@ -42,8 +45,8 @@ Your ONLY task is to categorize the user's query into one or more categories.
 
 # Define a chat history with predefined user-chatbot interactions for context.
 ChatHistory = [
-    {"role": "User", "message": "hello jarvis"},
-    {"role": "Chatbot", "message": "general hello jarvis"},
+    {"role": "User", "message": f"hello {Assistantname.lower()}"},
+    {"role": "Chatbot", "message": f"general hello {Assistantname.lower()}"},
     {"role": "User", "message": "what is the price of gold in india?"},
     {"role": "Chatbot", "message": "realtime what is the price of gold in india?"},
     {"role": "User", "message": "who is the current prime minister?"},
