@@ -1363,12 +1363,14 @@
         }
         processWordQueue(aiBubble);
         
+        let buffer = '';
         while (true) {
           const { value, done } = await reader.read();
           if (done) break;
           
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); 
           
           for (const line of lines) {
             if (!line.trim()) continue;
@@ -1387,9 +1389,16 @@
                 // Done handled by while loop and flag
               }
             } catch (e) {
-              console.error("Parse error", e, line);
+              console.warn("Partial JSON or chunking artifact", e);
             }
           }
+        }
+        if (buffer.trim()) {
+           try {
+             const data = JSON.parse(buffer);
+             if (data.chunk) wordQueue.push({ type: 'chunk', content: data.chunk });
+             if (data.reply) wordQueue.push({ type: 'reply', content: data.reply });
+           } catch (e) { }
         }
 
         // Wait for queue to empty

@@ -6,7 +6,7 @@ Run with:  python WebMain.py
 Then open: http://localhost:8000
 """
 
-from flask import Flask, request, jsonify, render_template, send_from_directory, session
+from flask import Flask, request, jsonify, render_template, send_from_directory, session, Response, stream_with_context
 from dotenv import load_dotenv
 import threading
 import sys
@@ -129,11 +129,8 @@ def serve_sw():
     return response
 
 
-# ── POST /speak ──────────────────────────────────────────────────────────────
-from flask import Flask, request, jsonify, render_template, send_from_directory, session, Response, stream_with_context
+# ── POST /speak (Streaming) ──────────────────────────────────────────────────
 import json
-
-# ... (omitted similar lines for brevity in instruction, but I will provide full replacement content for the function block)
 
 @app.route("/speak", methods=["POST"])
 def speak():
@@ -202,12 +199,15 @@ def speak():
             return formatted_text.replace('\n', '<br>') if '<div class="code-container">' not in formatted_text else formatted_text
 
         for task in Decision:
-            if interrupt_flag.is_set(): break
+            if interrupt_flag.is_set(): 
+                print(f"[WebMain] Interrupt detected, stopping task: {task}")
+                break
 
-            if "generate image" in task:
-                prompt = task.replace("generate image", "").strip()
-                yield json.dumps({"reply": f"Generating images for '{prompt}'...", "status": "working"}) + "\n"
-                try:
+            try:
+                print(f"[WebMain] Executing task: {task}")
+                if "generate image" in task:
+                    prompt = task.replace("generate image", "").strip()
+                    yield json.dumps({"reply": f"Generating images for '{prompt}'...", "status": "working"}) + "\n"
                     abs_img = GenerateImages(prompt)
                     if abs_img and os.path.exists(abs_img):
                         filename = os.path.basename(abs_img)
@@ -215,28 +215,28 @@ def speak():
                         yield json.dumps({"reply": img_html, "status": "done"}) + "\n"
                     else:
                         yield json.dumps({"reply": "Image generation failed.", "status": "error"}) + "\n"
-                except Exception as e:
-                    yield json.dumps({"reply": f"Error: {e}", "status": "error"}) + "\n"
 
-            elif any(tag in task for tag in ["realtime", "general", "content"]):
-                clean_query = task.replace("realtime", "").replace("general", "").replace("content", "").strip()
-                modified_query = QueryModifier(clean_query)
-                
-                if "realtime" in task:
-                    generator = RealtimeSearchEngine(modified_query, provided_messages=history, user_name=username)
-                else:
-                    generator = ChatBot(modified_query, provided_messages=history, user_name=username, document_context=document_context)
+                elif any(tag in task for tag in ["realtime", "general", "content"]):
+                    clean_query = task.replace("realtime", "").replace("general", "").replace("content", "").strip()
+                    modified_query = QueryModifier(clean_query)
+                    
+                    if "realtime" in task:
+                        generator = RealtimeSearchEngine(modified_query, provided_messages=history, user_name=username)
+                    else:
+                        generator = ChatBot(modified_query, provided_messages=history, user_name=username, document_context=document_context)
 
-                last_sent_len = 0
-                for full_answer in generator:
-                    if interrupt_flag.is_set(): break
-                    
-                    # Yield ONLY the new part
-                    new_chunk = full_answer[last_sent_len:]
-                    last_sent_len = len(full_answer)
-                    
-                    # We send chunks as JSON for easier parsing on client
-                    yield json.dumps({"chunk": new_chunk}) + "\n"
+                    last_sent_len = 0
+                    for full_answer in generator:
+                        if interrupt_flag.is_set(): break
+                        
+                        new_chunk = full_answer[last_sent_len:]
+                        last_sent_len = len(full_answer)
+                        yield json.dumps({"chunk": new_chunk}) + "\n"
+            except Exception as e:
+                print(f"[WebMain] Loop Error: {e}")
+                import traceback
+                traceback.print_exc()
+                yield json.dumps({"reply": f"An error occurred: {str(e)}", "status": "error"}) + "\n"
         
         yield json.dumps({"done": True}) + "\n"
 

@@ -16,6 +16,13 @@ if not CohereAPIKey:
 else:
     co = cohere.Client(api_key=CohereAPIKey)
 
+GroqAPIKey = os.getenv("GroqAPIKey")
+if GroqAPIKey:
+    from groq import Groq
+    groq_client = Groq(api_key=GroqAPIKey)
+else:
+    groq_client = None
+
 # Define a list of recognized function keywords for task categorization.
 funcs = [
     "exit", "general", "realtime", "generate image", "content"
@@ -78,11 +85,7 @@ def FirstLayerDMM(prompt: str = "test"):
     try:
         if not co: return ["general " + prompt]
         
-        GroqAPIKey = os.getenv("GroqAPIKey")
-        if GroqAPIKey:
-            from groq import Groq
-            groq_client = Groq(api_key=GroqAPIKey)
-            
+        if groq_client:
             # Format history for Groq
             groq_messages = [{"role": "system", "content": preamble}]
             for msg in ChatHistory:
@@ -91,6 +94,7 @@ def FirstLayerDMM(prompt: str = "test"):
             groq_messages.append({"role": "user", "content": prompt})
 
             try:
+                print(f"[Model] Calling Groq Decision model...")
                 completion = groq_client.chat.completions.create(
                     model="llama-3.1-8b-instant",
                     messages=groq_messages,
@@ -98,6 +102,7 @@ def FirstLayerDMM(prompt: str = "test"):
                     max_tokens=64
                 )
                 response = completion.choices[0].message.content.strip()
+                print(f"[Model] Groq Decision: {response}")
             except Exception as e:
                 print(f"Groq Decision Error: {e}, falling back to Cohere...")
                 response = ""
