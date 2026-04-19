@@ -92,6 +92,21 @@
       letter-spacing: 0.01em;
     }
 
+    .logo-text-group {
+      display: flex;
+      flex-direction: column;
+      line-height: 1;
+    }
+
+    .logo-subtext {
+      font-size: 0.55rem;
+      font-weight: 400;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
     .logo-icon {
       width: 28px;
       height: 28px;
@@ -102,6 +117,44 @@
       justify-content: center;
       font-size: 14px;
       color: #000;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .logo-icon::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -150%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+      transition: all 0.6s ease;
+    }
+
+    .logo:hover .logo-icon::after {
+      left: 150%;
+    }
+
+    .logo {
+      position: relative;
+      overflow: hidden;
+      padding-right: 15px;
+      border-radius: 8px;
+    }
+    .logo::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transition: all 0.8s ease;
+      pointer-events: none;
+    }
+    .logo:hover::after {
+      left: 100%;
     }
 
     .header-actions { display: flex; gap: 8px; }
@@ -118,10 +171,77 @@
       justify-content: center;
       cursor: pointer;
       transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #clear-btn::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -150%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      transition: all 0.6s ease;
+    }
+
+    #clear-btn {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+      box-shadow: 0 0 15px var(--glow);
+    }
+    #clear-btn:hover {
+      filter: brightness(1.1);
+      transform: scale(1.05);
+      box-shadow: 0 0 25px var(--glow);
+    }
+    #clear-btn:active {
+      background: var(--red);
+      border-color: var(--red);
+      color: #fff;
+      transform: scale(0.9);
+      box-shadow: 0 0 30px var(--red-glow);
+      transition: all 0.1s;
+    }
+
+    /* Auth Shimmer */
+    #auth-container {
+      position: relative;
+      overflow: hidden;
+      border-radius: 50%;
+    }
+    #auth-container::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -150%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+      transition: all 0.6s ease;
+      pointer-events: none;
+    }
+    #auth-container:hover::after {
+      left: 150%;
     }
 
     .icon-btn:hover { background: var(--surface2); color: var(--text); }
     .icon-btn svg { width: 18px; height: 18px; }
+
+    #sign-in-btn {
+      border-radius: 50%;
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--glow);
+      box-shadow: 0 0 10px var(--glow);
+    }
+    #sign-in-btn:hover {
+      background: var(--accent);
+      color: #000;
+      box-shadow: 0 0 20px var(--glow);
+    }
 
     #messages {
       flex: 1;
@@ -138,6 +258,109 @@
     #messages::-webkit-scrollbar-thumb {
       background: var(--surface2);
       border-radius: 4px;
+    }
+
+    /* Welcome Hero Section */
+    #welcome-hero {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding-bottom: 5vh;
+      animation: fadeUp 0.8s ease both;
+    }
+
+    .hero-logo {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #000;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 30px var(--glow);
+    }
+
+    .hero-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      line-height: 1.2;
+    }
+
+    .hero-subtitle {
+      color: var(--muted);
+      font-size: 1.1rem;
+      max-width: 500px;
+      line-height: 1.6;
+      margin-bottom: 40px;
+    }
+
+    .suggestions {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .suggestion-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 16px 20px;
+      border-radius: 16px;
+      font-size: 0.9rem;
+      color: var(--text);
+      cursor: pointer;
+      text-align: left;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .suggestion-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transition: all 0.6s ease;
+      pointer-events: none;
+    }
+
+    .suggestion-card:hover::after {
+      left: 100%;
+    }
+
+    .suggestion-card:hover {
+      background: var(--surface2);
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .suggestion-action {
+      color: var(--accent);
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    @media (max-width: 600px) {
+      .suggestions { grid-template-columns: 1fr; }
+      .hero-title { font-size: 1.8rem; }
     }
 
     .msg-row {
@@ -286,56 +509,55 @@
     }
 
     #send-btn {
-      padding: 12px 36px;
-      border-radius: 18px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
       border: none;
       background: linear-gradient(135deg, var(--accent), var(--accent2));
       color: #000;
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
-      font-size: 0.95rem;
       cursor: pointer;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
       overflow: hidden;
-      box-shadow: 0 4px 15px var(--glow);
+      box-shadow: 0 4px 20px var(--glow);
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
+    }
+
+    #send-btn svg {
+      width: 20px;
+      height: 20px;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     #send-btn:hover {
-      transform: scale(1.04);
-      box-shadow: 0 10px 35px var(--glow);
+      transform: scale(1.1);
+      box-shadow: 0 10px 30px var(--glow);
+    }
+
+    #send-btn:hover svg {
+      transform: translate(2px, -2px) rotate(-10deg);
     }
 
     #send-btn:active {
-      transform: scale(0.92);
-      box-shadow: 0 0 60px var(--accent);
-      filter: brightness(1.3);
+      transform: scale(0.9);
+      filter: brightness(1.2);
     }
 
-    #send-btn::before {
+    #send-btn::after {
       content: '';
       position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(
-        120deg,
-        transparent,
-        rgba(255, 255, 255, 0.4),
-        transparent
-      );
-      transition: all 0.6s ease-out;
+      inset: -2px;
+      background: linear-gradient(135deg, transparent, rgba(255,255,255,0.4), transparent);
+      z-index: 1;
+      transform: translateX(-100%);
+      transition: transform 0.6s;
     }
 
-    #send-btn:active::before {
-      left: 100%;
-      transition: 0.4s ease-out;
+    #send-btn:hover::after {
+      transform: translateX(100%);
     }
 
     #status {
@@ -345,6 +567,63 @@
       letter-spacing: 0.04em;
     }
 
+    /* Auth Guard Overlay */
+    #auth-guard {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .guard-content {
+      max-width: 400px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .guard-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+      background: linear-gradient(to right, #ffffff, #888);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .guard-desc {
+      color: var(--muted);
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    #guard-sign-in-btn {
+      padding: 16px 40px;
+      border-radius: 30px;
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.3s;
+      box-shadow: 0 0 30px var(--glow);
+    }
+
+    #guard-sign-in-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 50px var(--accent);
+    }
+
     @media (max-width: 768px) {
       .input-wrapper { 
         padding: 0 8px; 
@@ -352,11 +631,8 @@
         gap: 8px;
       }
       #send-btn { 
-        width: auto; 
-        padding: 12px 16px; 
-        flex-shrink: 0;
-        font-size: 0.8rem;
-        letter-spacing: 0.05em;
+        width: 42px;
+        height: 42px;
       }
       #text-input {
         font-size: 0.95rem;
@@ -368,27 +644,37 @@
 </head>
 
 <body>
+  <div id="auth-guard" style="display: none;">
+    <div class="guard-content">
+      <div class="logo-icon" style="width: 60px; height: 60px; font-size: 30px; margin: 0 auto 24px;">✦</div>
+      <h1 class="guard-title">Entry Denied</h1>
+      <p class="guard-desc">Please sign in to access Nemo AI and start your conversation.</p>
+      <button id="guard-sign-in-btn">Sign In to Continue</button>
+    </div>
+  </div>
+
   <div id="app">
 
     <header>
       <div class="logo">
         <div class="logo-icon">✦</div>
-        Nemo AI
+        <div class="logo-text-group">
+          Nemo AI
+          <span class="logo-subtext">Designed by Ayushman</span>
+        </div>
       </div>
       <div class="header-actions">
-        <button class="icon-btn" title="Settings">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <circle cx="12" cy="12" r="3" />
-            <path
-              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-        </button>
-        <button class="icon-btn" title="Profile">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-        </button>
+        <!-- Clerk Auth Container -->
+        <div id="auth-container" style="display: flex; align-items: center; justify-content: center; min-width: 38px; min-height: 38px;">
+          <!-- Placeholder DP Style Icon -->
+          <button class="icon-btn" id="sign-in-btn" title="Sign In">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          </button>
+          <div id="user-button"></div>
+        </div>
         <button class="icon-btn" id="clear-btn" title="Clear Chat (Privacy Mode)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6"></polyline>
@@ -399,10 +685,32 @@
     </header>
 
     <div id="messages">
-      <div class="msg-row ai">
-        <span class="msg-label">Nemo</span>
-        <div class="bubble">Hey! I'm Nemo, your text-based AI assistant. Ask me anything!</div>
+      <!-- Welcome Hero Section (Only visible when empty) -->
+      <div id="welcome-hero">
+        <div class="hero-logo">✦</div>
+        <h1 class="hero-title">Build anything with AI.</h1>
+        <p class="hero-subtitle">Write code, generate images, automate tasks, and get instant answers — all in one place.</p>
+        
+        <div class="suggestions">
+          <div class="suggestion-card" onclick="useSuggestion('Create a Python script for a chatbot')">
+            <span class="suggestion-action">Coding</span>
+            <span>Create a Python script for a chatbot</span>
+          </div>
+          <div class="suggestion-card" onclick="useSuggestion('Generate an image of a futuristic city')">
+            <span class="suggestion-action">Art</span>
+            <span>Generate an image of a futuristic city</span>
+          </div>
+          <div class="suggestion-card" onclick="useSuggestion('Explain how APIs work')">
+            <span class="suggestion-action">Knowledge</span>
+            <span>Explain how APIs work</span>
+          </div>
+          <div class="suggestion-card" onclick="useSuggestion('Help me debug my code')">
+            <span class="suggestion-action">Debugging</span>
+            <span>Help me debug my code</span>
+          </div>
+        </div>
       </div>
+
       <div class="msg-row you" id="interim-row">
         <span class="msg-label">You</span>
         <div class="bubble" id="interim-text">…</div>
@@ -412,7 +720,12 @@
     <div class="control-panel">
       <div class="input-wrapper">
         <input type="text" id="text-input" placeholder="Ask Nemo anything..." />
-        <button id="send-btn">Send</button>
+        <button id="send-btn" title="Send Message">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
       </div>
       <div id="status">Type your message below...</div>
     </div>
@@ -425,6 +738,130 @@
     // ══════════════════════════════════════════
     const SPEAK_URL = '/speak';
     const INTERRUPT_URL = '/interrupt';
+
+    // ══════════════════════════════════════════
+    //  CLERK AUTHENTICATION (Fixed Re-implementation)
+    // ══════════════════════════════════════════
+    const CLERK_PUBLISHABLE_KEY = "pk_test_YWxlcnQtbmFyd2hhbC04OC5jbGVyay5hY2NvdW50cy5kZXYk";
+    const FRONTEND_API = "alert-narwhal-88.clerk.accounts.dev";
+
+    async function initClerk() {
+      const signInBtn = document.getElementById('sign-in-btn');
+      const userButtonDiv = document.getElementById('user-button');
+
+      if (!CLERK_PUBLISHABLE_KEY || CLERK_PUBLISHABLE_KEY.includes("YOUR_CLERK")) return;
+
+      const script = document.createElement('script');
+      script.setAttribute('data-clerk-publishable-key', CLERK_PUBLISHABLE_KEY);
+      script.async = true;
+      script.src = `https://${FRONTEND_API}/npm/@clerk/clerk-js@latest/dist/clerk.browser.js`;
+      script.crossOrigin = 'anonymous';
+
+      script.onload = async () => {
+        try {
+          // Appearance settings for Dark, Yellow, Glassmorphic theme
+          await window.Clerk.load({
+            appearance: {
+              variables: {
+                colorPrimary: '#facc15',
+                colorBackground: '#0a0a0a',
+                colorText: '#ffffff',
+                colorSecondary: '#a3a3a3',
+                colorInputBackground: '#1a1a1a',
+                colorInputText: '#ffffff',
+                borderRadius: '14px',
+              },
+              elements: {
+                card: {
+                  background: 'rgba(10, 10, 10, 0.85)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9)'
+                },
+                navbar: {
+                  background: 'transparent'
+                },
+                headerTitle: {
+                  fontFamily: 'Syne, sans-serif',
+                  fontWeight: '700'
+                },
+                socialButtonsIconButton: {
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  '&:hover': {
+                    background: 'rgba(255, 255, 255, 0.1)',
+                  }
+                },
+                footerActionLink: {
+                  color: '#facc15',
+                  '&:hover': { color: '#eab308' }
+                },
+                formButtonPrimary: {
+                  background: 'linear-gradient(135deg, #facc15, #eab308)',
+                  color: '#000',
+                  textTransform: 'uppercase',
+                  fontWeight: '700',
+                  letterSpacing: '1px',
+                  '&:hover': {
+                    filter: 'brightness(1.1)',
+                    transform: 'scale(1.02)'
+                  }
+                }
+              }
+            }
+          });
+          
+          const refreshUI = () => {
+            const authGuard = document.getElementById('auth-guard');
+            const app = document.getElementById('app');
+
+            if (window.Clerk.user) {
+              signInBtn.style.display = 'none';
+              userButtonDiv.style.display = 'block';
+              authGuard.style.display = 'none';
+              app.style.filter = 'none';
+              app.style.pointerEvents = 'auto';
+
+              if (!userButtonDiv.hasChildNodes()) {
+                window.Clerk.mountUserButton(userButtonDiv);
+              }
+            } else {
+              signInBtn.style.display = 'flex';
+              userButtonDiv.style.display = 'none';
+              authGuard.style.display = 'flex';
+              app.style.filter = 'blur(10px)';
+              app.style.pointerEvents = 'none';
+            }
+          };
+
+          refreshUI();
+
+          // Global click handler to ensure it works even if UI refreshes
+          signInBtn.onclick = () => {
+            window.Clerk.openSignIn();
+          };
+          
+          document.getElementById('guard-sign-in-btn').onclick = () => {
+            window.Clerk.openSignIn();
+          };
+
+          // Listen for sign-in/out events
+          window.Clerk.addListener(() => refreshUI());
+
+        } catch (err) {
+          console.error('Clerk Error:', err);
+          signInBtn.onclick = () => alert("Auth failed to load. Check your internet or key.");
+        }
+      };
+      
+      script.onerror = () => {
+        signInBtn.onclick = () => alert("Could not load Clerk script.");
+      };
+
+      document.body.appendChild(script);
+    }
+
+    initClerk();
 
     // ── Copy Functionality ──
     function copyCode(btn) {
@@ -451,8 +888,15 @@
     const sendBtn = document.getElementById('send-btn');
 
     const clearBtn = document.getElementById('clear-btn');
+    const welcomeHero = document.getElementById('welcome-hero');
 
     let isSending = false;
+
+    // ── Suggestion Handling ──
+    function useSuggestion(text) {
+      textInput.value = text;
+      sendTextInput();
+    }
 
     // ── Clear Chat Functionality ──
     async function clearChat() {
@@ -462,10 +906,10 @@
       try {
         const res = await fetch('/clear', { method: 'POST' });
         if (res.ok) {
-          // Clear UI messages except the first greeting
-          const greeting = messagesEl.querySelector('.msg-row.ai');
           messagesEl.innerHTML = '';
-          if (greeting) messagesEl.appendChild(greeting);
+          // Bring back hero
+          messagesEl.appendChild(welcomeHero);
+          welcomeHero.style.display = 'flex';
           messagesEl.appendChild(interimRow);
           
           setStatus('Chat history cleared', 'ai');
@@ -612,6 +1056,12 @@
     function sendTextInput() {
       const text = textInput.value.trim();
       if (!text || isSending) return;
+
+      // Hide welcome hero on first message
+      if (welcomeHero && welcomeHero.style.display !== 'none') {
+        welcomeHero.style.display = 'none';
+      }
+
       textInput.value = '';
       addBubble('you', text);
       sendToBackend(text);
