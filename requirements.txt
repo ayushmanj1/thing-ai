@@ -9,3 +9,5 @@ pillow
 rich
 requests
 mtranslate
+PyPDF2
+python-docx

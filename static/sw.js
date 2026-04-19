@@ -1,4 +1,4 @@
-const CACHE_NAME = 'thing-ai-v1.1.0';
+const CACHE_NAME = 'thing-ai-v1.1.1';
 const ASSETS_TO_CACHE = [
   '/',
   '/manifest.json',

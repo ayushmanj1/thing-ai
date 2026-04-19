@@ -1,23 +1,16 @@
 import os
-from groq import Groq
-import cohere
 import datetime
 from dotenv import load_dotenv
+from backend.Utils import UniversalAI
 
 # Load environment variables
 load_dotenv(override=True)
 
 DefaultUsername = os.getenv("Username", "User")
 Assistantname = os.getenv("Assistantname", "Thing")
-GroqAPIKey = os.getenv("GroqAPIKey")
-CohereAPIKey = os.getenv("CohereAPIKey")
 
-# Initialize clients
-client = Groq(api_key=GroqAPIKey)
-co_client = cohere.Client(api_key=CohereAPIKey)
-
-def GetSystemMessage(user_name=DefaultUsername):
-    return f"""
+def GetSystemMessage(user_name=DefaultUsername, document_context=None):
+    base_prompt = f"""
 You are {Assistantname}, a highly intelligent, helpful, and professional AI assistant. 
 You are currently chatting with {user_name}. 
 
@@ -43,78 +36,38 @@ You are currently chatting with {user_name}.
 4. **COMPREHENSIVENESS**: Match your level of detail to the user's intent.
 5. **RESTRICTIONS**: Reply in English only. Do not mention your training data or AI nature unless asked.
 """
+    if document_context:
+        base_prompt += f"""
+*** DOCUMENT CONTEXT READY ***
+The user has uploaded documents. Here is the content of the documents:
+{document_context}
 
-# Real-time date & time
+*** DOCUMENT Q&A RULES ***:
+1. Answer the user's question BASED ONLY on the provided document content.
+2. If the answer is not found in the documents, respond: "Not found in document."
+3. Be concise and precise according to the document content.
+4. If the user asks about something unrelated to the documents, kindly remind them to ask about the uploaded files or clear the files first.
+"""
+    return base_prompt
+
 def RealtimeInformation():
     now = datetime.datetime.now()
     return f"Day: {now.strftime('%A')}\nDate: {now.strftime('%d/%m/%Y')}\nTime: {now.strftime('%H:%M:%S')}\n"
 
-# Main chatbot function
-def ChatBot(Query, provided_messages=None, user_name=None):
+def ChatBot(Query, provided_messages=None, user_name=None, document_context=None):
     if provided_messages is None:
         provided_messages = []
     if user_name is None:
         user_name = DefaultUsername
 
-    try:
-        system_content = GetSystemMessage(user_name)
-        combined_system_prompt = system_content + "\n" + RealtimeInformation()
-        messages_to_send = [{"role": "system", "content": combined_system_prompt}] + provided_messages[-5:] + [{"role": "user", "content": Query}]
+    system_content = GetSystemMessage(user_name, document_context=document_context)
+    combined_system_prompt = system_content + "\n" + RealtimeInformation()
+    
+    Answer = ""
+    for chunk in UniversalAI(Query, system_prompt=combined_system_prompt, history=provided_messages):
+        Answer += chunk
+        yield Answer
 
-        Answer = ""
-
-        # 1. Try Groq (Llama-3.3-70b)
-        try:
-            completion = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=messages_to_send,
-                max_tokens=1024,
-                temperature=0.7,
-                stream=True
-            )
-            for chunk in completion:
-                if chunk.choices[0].delta.content:
-                    Answer += chunk.choices[0].delta.content
-                    yield Answer
-
-        # 2. Fallback to Groq (Llama-3.1-8b) if 429
-        except Exception as e:
-            if "429" in str(e):
-                print(f"Groq 70B Rate Limit, falling back to 8B...")
-                completion = client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
-                    messages=messages_to_send,
-                    max_tokens=1024,
-                    temperature=0.7,
-                    stream=True
-                )
-                for chunk in completion:
-                    if chunk.choices[0].delta.content:
-                        Answer += chunk.choices[0].delta.content
-                        yield Answer
-            else: raise e
-
-    except Exception as e:
-        # 3. Final Fallback to Cohere
-        try:
-            print(f"Groq Failed, falling back to Cohere...")
-            stream = co_client.chat_stream(
-                model="command-r-plus-08-2024",
-                message=Query,
-                preamble=GetSystemMessage(user_name) + "\n" + RealtimeInformation(),
-                connectors=[]
-            )
-            Answer = ""
-            for event in stream:
-                if event.event_type == "text-generation":
-                    Answer += event.text
-                    yield Answer
-        except Exception as final_e:
-            print(f"All Models Failed: {final_e}")
-            yield f"Error: {final_e}"
-
-    # Save interaction to logic outside this generator if needed, 
-    # but for compatibility, we update the passed list.
     if Answer:
         provided_messages.append({"role": "user", "content": Query})
         provided_messages.append({"role": "assistant", "content": Answer})
@@ -123,8 +76,6 @@ def ClearChatHistory(provided_messages=None):
     if provided_messages is not None:
         provided_messages.clear()
 
-
-# Run program
 if __name__ == "__main__":
     while True:
         user_input = input("Enter Your Question: ")
@@ -134,4 +85,4 @@ if __name__ == "__main__":
             new_chars = chunk[len(full_response):]
             print(new_chars, end="", flush=True)
             full_response = chunk
-        print()
+        print()
