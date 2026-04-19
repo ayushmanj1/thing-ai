@@ -23,7 +23,7 @@ if sys.stdout.encoding != 'utf-8':
 
 # ── Environment ──────────────────────────────────────────────────────────────
 load_dotenv(override=True)
-DefaultUsername      = os.getenv("Username", "User")
+DefaultUsername      = os.getenv("Username", "Guest")
 Assistantname = os.getenv("Assistantname", "Nemo")
 
 # ── File-based status helpers (legacy, kept for minimal changes) ──────────────
