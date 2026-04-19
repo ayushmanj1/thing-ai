@@ -1,8 +1,8 @@
-const CACHE_NAME = 'thing-ai-v1.0.2';
+const CACHE_NAME = 'thing-ai-v1.0.3';
 const ASSETS_TO_CACHE = [
   '/',
-  '/static/icon-192.png?v=1.0.2',
-  '/static/icon-512.png?v=1.0.2',
+  '/static/icon-192.png?v=1.0.3',
+  '/static/icon-512.png?v=1.0.3',
   'https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap'
 ];
 
