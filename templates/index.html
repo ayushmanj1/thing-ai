@@ -359,8 +359,16 @@
     }
 
     @media (max-width: 600px) {
-      .suggestions { grid-template-columns: 1fr; }
+      .suggestions { 
+        grid-template-columns: repeat(2, 1fr); 
+        gap: 8px;
+      }
+      .suggestion-card {
+        padding: 12px 15px;
+        font-size: 0.85rem;
+      }
       .hero-title { font-size: 1.8rem; }
+      .hero-subtitle { font-size: 0.95rem; margin-bottom: 24px; }
     }
 
     .msg-row {
@@ -605,7 +613,7 @@
       margin-bottom: 32px;
     }
 
-    #guard-sign-in-btn {
+    #guard-sign-in-btn, #guard-sign-up-btn {
       padding: 16px 40px;
       border-radius: 30px;
       background: var(--accent);
@@ -619,15 +627,26 @@
       box-shadow: 0 0 30px var(--glow);
     }
 
-    #guard-sign-in-btn:hover {
+    #guard-sign-in-btn:hover, #guard-sign-up-btn:hover {
       transform: translateY(-2px);
       box-shadow: 0 0 50px var(--accent);
+    }
+
+    #guard-sign-in-btn {
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      box-shadow: none;
+    }
+    
+    #guard-sign-in-btn:hover {
+      background: rgba(250, 204, 21, 0.1);
     }
 
     @media (max-width: 768px) {
       .input-wrapper { 
         padding: 0 8px; 
-        flex-direction: row-reverse; /* Put send button on the left as requested */
+        flex-direction: row; 
         gap: 8px;
       }
       #send-btn { 
@@ -647,9 +666,12 @@
   <div id="auth-guard" style="display: none;">
     <div class="guard-content">
       <div class="logo-icon" style="width: 60px; height: 60px; font-size: 30px; margin: 0 auto 24px;">✦</div>
-      <h1 class="guard-title">Entry Denied</h1>
-      <p class="guard-desc">Please sign in to access Nemo AI and start your conversation.</p>
-      <button id="guard-sign-in-btn">Sign In to Continue</button>
+      <h1 class="guard-title">Unlock Nemo AI</h1>
+      <p class="guard-desc">Sign up or login to explore the power of Nemo AI. Get instant answers, generate stunning art, and much more.</p>
+      <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <button id="guard-sign-up-btn">Sign Up to Use</button>
+        <button id="guard-sign-in-btn">Sign In</button>
+      </div>
     </div>
   </div>
 
@@ -760,56 +782,54 @@
       script.onload = async () => {
         try {
           // Appearance settings for Dark, Yellow, Glassmorphic theme
-          await window.Clerk.load({
-            appearance: {
-              variables: {
-                colorPrimary: '#facc15',
-                colorBackground: '#0a0a0a',
-                colorText: '#ffffff',
-                colorSecondary: '#a3a3a3',
-                colorInputBackground: '#1a1a1a',
-                colorInputText: '#ffffff',
-                borderRadius: '14px',
+          const clerkAppearance = {
+            variables: {
+              colorPrimary: '#facc15',
+              colorBackground: '#0a0a0a',
+              colorText: '#ffffff',
+              colorSecondary: '#a3a3a3',
+              colorInputBackground: '#1a1a1a',
+              colorInputText: '#ffffff',
+              borderRadius: '14px',
+              colorTextOnPrimaryBackground: '#000000',
+            },
+            elements: {
+              card: {
+                background: 'rgba(10, 10, 10, 0.85)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9)',
+                color: '#fff'
               },
-              elements: {
-                card: {
-                  background: 'rgba(10, 10, 10, 0.85)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.9)'
-                },
-                navbar: {
-                  background: 'transparent'
-                },
-                headerTitle: {
-                  fontFamily: 'Syne, sans-serif',
-                  fontWeight: '700'
-                },
-                socialButtonsIconButton: {
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  '&:hover': {
-                    background: 'rgba(255, 255, 255, 0.1)',
-                  }
-                },
-                footerActionLink: {
-                  color: '#facc15',
-                  '&:hover': { color: '#eab308' }
-                },
-                formButtonPrimary: {
-                  background: 'linear-gradient(135deg, #facc15, #eab308)',
-                  color: '#000',
-                  textTransform: 'uppercase',
-                  fontWeight: '700',
-                  letterSpacing: '1px',
-                  '&:hover': {
-                    filter: 'brightness(1.1)',
-                    transform: 'scale(1.02)'
-                  }
-                }
-              }
+              navbar: { background: 'transparent' },
+              headerTitle: { fontFamily: 'Syne, sans-serif', fontWeight: '700' },
+              headerSubtitle: { color: '#a3a3a3' },
+              socialButtonsIconButton: {
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                '&:hover': { background: 'rgba(255, 255, 255, 0.1)' }
+              },
+              footerActionLink: { color: '#facc15', '&:hover': { color: '#eab308' } },
+              formButtonPrimary: {
+                background: 'linear-gradient(135deg, #facc15, #eab308)',
+                color: '#000',
+                textTransform: 'uppercase',
+                fontWeight: '700',
+                letterSpacing: '1px',
+                '&:hover': { filter: 'brightness(1.1)', transform: 'scale(1.02)' }
+              },
+              formFieldInput: {
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                color: '#fff'
+              },
+              formFieldLabel: { color: '#fff' },
+              identityPreviewText: { color: '#fff' },
+              identityPreviewEditButtonIcon: { color: '#facc15' }
             }
-          });
+          };
+
+          await window.Clerk.load({ appearance: clerkAppearance });
           
           const refreshUI = () => {
             const authGuard = document.getElementById('auth-guard');
@@ -823,7 +843,7 @@
               app.style.pointerEvents = 'auto';
 
               if (!userButtonDiv.hasChildNodes()) {
-                window.Clerk.mountUserButton(userButtonDiv);
+                window.Clerk.mountUserButton(userButtonDiv, { appearance: clerkAppearance });
               }
             } else {
               signInBtn.style.display = 'flex';
@@ -838,11 +858,15 @@
 
           // Global click handler to ensure it works even if UI refreshes
           signInBtn.onclick = () => {
-            window.Clerk.openSignIn();
+            window.Clerk.openSignIn({ appearance: clerkAppearance });
           };
           
           document.getElementById('guard-sign-in-btn').onclick = () => {
-            window.Clerk.openSignIn();
+            window.Clerk.openSignIn({ appearance: clerkAppearance });
+          };
+
+          document.getElementById('guard-sign-up-btn').onclick = () => {
+            window.Clerk.openSignUp({ appearance: clerkAppearance });
           };
 
           // Listen for sign-in/out events
