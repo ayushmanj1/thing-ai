@@ -11,3 +11,4 @@ requests
 mtranslate
 PyPDF2
 python-docx
+razorpay

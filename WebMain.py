@@ -16,6 +16,10 @@ import io
 import time
 import uuid
 import traceback
+import razorpay
+import hmac
+import hashlib
+
 
 # ── Force UTF-8 ──────────────────────────────────────────────────────────────
 if sys.stdout.encoding != 'utf-8':
@@ -244,6 +248,59 @@ def speak():
         yield json.dumps({"done": True}) + "\n"
 
     return Response(stream_with_context(generate()), mimetype='application/x-ndjson')
+
+# ── Razorpay Integration ─────────────────────────────────────────────────────
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
+
+razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET)) if RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET else None
+
+@app.route("/create-order", methods=["POST"])
+def create_order():
+    if not razorpay_client:
+        return jsonify(error="Razorpay not configured"), 500
+    try:
+        data = request.json
+        amount = data.get("amount", 9900) # Default amount in paise
+        currency = "INR"
+        receipt = str(uuid.uuid4())
+        
+        order = razorpay_client.order.create({
+            "amount": amount,
+            "currency": currency,
+            "receipt": receipt,
+        })
+        return jsonify(order_id=order["id"], amount=amount, key=RAZORPAY_KEY_ID)
+    except Exception as e:
+        return jsonify(error=str(e)), 500
+
+@app.route("/verify-payment", methods=["POST"])
+def verify_payment():
+    if not razorpay_client:
+        return jsonify(error="Razorpay not configured"), 500
+    data = request.json
+    razorpay_order_id = data.get("razorpay_order_id")
+    razorpay_payment_id = data.get("razorpay_payment_id")
+    razorpay_signature = data.get("razorpay_signature")
+    plan_name = data.get("plan", "Premium")
+    
+    # Verify signature
+    try:
+        razorpay_client.utility.verify_payment_signature({
+            'razorpay_order_id': razorpay_order_id,
+            'razorpay_payment_id': razorpay_payment_id,
+            'razorpay_signature': razorpay_signature
+        })
+        
+        uid = get_session_id()
+        SESSION_DATA[uid]["is_premium"] = True
+        SESSION_DATA[uid]["plan"] = plan_name
+        
+        return jsonify(status="success", message=f"Payment verified. Welcome to {plan_name}!")
+    except razorpay.errors.SignatureVerificationError:
+        return jsonify(status="error", message="Invalid payment signature"), 400
+    except Exception as e:
+        return jsonify(status="error", message=str(e)), 500
 
 # ── POST /interrupt ──────────────────────────────────────────────────────────
 @app.route("/interrupt", methods=["POST"])
