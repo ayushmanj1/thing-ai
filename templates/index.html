@@ -1437,55 +1437,69 @@
 
       if (!cleanText) return;
 
-      // Limit length for performance (long texts can freeze TTS)
+      // Limit length for performance
       if (cleanText.length > 1500) {
         cleanText = cleanText.substring(0, 1500) + '... and more.';
       }
 
       const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.rate = 1.0;
-      utterance.pitch = 0.9; // Slightly lower pitch for a deeper/male tone effect
+      
+      // Default male-leaning settings
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      utterance.rate = 0.95; // Slightly slower for deeper feel
       utterance.volume = 1.0;
 
-      // Pick a natural-sounding male voice if available
       const voices = window.speechSynthesis.getVoices();
       
-      // Look for common male voice names first
-      const maleVoiceNames = ['david', 'james', 'mark', 'daniel', 'matthew', 'guy', 'aaron', 'thomas', 'microsoft david', 'google us english male'];
+      // Search strategies for male voices
+      const malePatterns = [
+        'david', 'james', 'mark', 'daniel', 'matthew', 'guy', 'aaron', 'thomas', 
+        'microsoft david', 'google us english male', 'en-us-x-sfg', 'en-gb-x-rjs', 
+        'male', 'man', 'daddy'
+      ];
+      
+      const femalePatterns = ['samantha', 'zira', 'female', 'woman', 'en-us-x-sfg-local', 'victoria', 'karen'];
+
+      // 1. Try to find an explicit male voice
       let preferred = voices.find(v => 
-        v.lang.startsWith('en') && maleVoiceNames.some(name => v.name.toLowerCase().includes(name))
+        v.lang.startsWith('en') && malePatterns.some(p => v.name.toLowerCase().includes(p))
       );
 
-      // Fallback: search for 'male' or avoid 'female/samantha/zira'
+      // 2. Try to find a voice that is NOT female
       if (!preferred) {
-         preferred = voices.find(v => 
-           v.lang.startsWith('en') && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('man'))
-         ) || voices.find(v => 
-           v.name.includes('Google') && v.lang.startsWith('en') && !v.name.toLowerCase().includes('female') && !v.name.toLowerCase().includes('zira') && !v.name.toLowerCase().includes('samantha')
-         ) || voices.find(v => 
-           v.lang.startsWith('en') && v.localService === false && !v.name.toLowerCase().includes('female')
-         ) || voices.find(v => v.lang.startsWith('en'));
+        preferred = voices.find(v => 
+          v.lang.startsWith('en') && !femalePatterns.some(p => v.name.toLowerCase().includes(p)) && v.name.includes('Google')
+        );
+      }
+
+      // 3. Last resort English
+      if (!preferred) {
+        preferred = voices.find(v => v.lang.startsWith('en'));
       }
       
       if (preferred) {
         utterance.voice = preferred;
-        // If we found a explicitly male voice, pitch can be normal, otherwise lower it
-        const isLikelyMale = maleVoiceNames.some(name => preferred.name.toLowerCase().includes(name)) || preferred.name.toLowerCase().includes('male');
-        utterance.pitch = isLikelyMale ? 0.9 : 0.75; 
+        const name = preferred.name.toLowerCase();
+        const isExplicitlyMale = malePatterns.some(p => name.includes(p));
+        const isExplicitlyFemale = femalePatterns.some(p => name.includes(p));
+        
+        // Deepen the pitch
+        if (isExplicitlyMale) {
+          utterance.pitch = 0.85;
+        } else if (isExplicitlyFemale) {
+          utterance.pitch = 0.65; // Force female voice to sound extremely deep/masculine
+        } else {
+          utterance.pitch = 0.7; // Medium deep for ambiguous voices
+        }
       } else {
-        utterance.pitch = 0.75; // Heavy fallback pitch reduction
+        utterance.pitch = 0.7; 
       }
 
       // Show stop button
       stopTtsBtn.style.display = 'flex';
 
-      utterance.onend = () => {
-        stopTtsBtn.style.display = 'none';
-      };
-
-      utterance.onerror = () => {
-        stopTtsBtn.style.display = 'none';
-      };
+      utterance.onend = () => { stopTtsBtn.style.display = 'none'; };
+      utterance.onerror = () => { stopTtsBtn.style.display = 'none'; };
 
       window.speechSynthesis.speak(utterance);
     }
