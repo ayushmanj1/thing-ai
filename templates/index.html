@@ -817,6 +817,24 @@
       background: rgba(250, 204, 21, 0.1);
     }
 
+    #guard-guest-btn {
+      padding: 16px 40px;
+      border-radius: 30px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.3s;
+    }
+
+    #guard-guest-btn:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+    }
+
     /* ── Responsive Enhancements ── */
     @media (max-width: 768px) {
       #app {
@@ -1229,6 +1247,7 @@
       <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
         <button id="guard-sign-up-btn">Sign Up to Use</button>
         <button id="guard-sign-in-btn">Sign In</button>
+        <button id="guard-guest-btn">Stay logged out and use</button>
       </div>
     </div>
   </div>
@@ -1308,10 +1327,7 @@
           style="display: flex; align-items: center; justify-content: center; min-width: 38px; min-height: 38px;">
           <!-- Placeholder DP Style Icon -->
           <button class="icon-btn" id="sign-in-btn" title="Sign In">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
+            <span style="font-size: 1.2rem; font-family: 'Syne', sans-serif; font-weight: 700;">✦</span>
           </button>
           <div id="user-button"></div>
         </div>
@@ -1483,6 +1499,7 @@
           const refreshUI = () => {
             const authGuard = document.getElementById('auth-guard');
             const app = document.getElementById('app');
+            const isGuest = localStorage.getItem('isGuest') === 'true';
 
             if (window.Clerk.user) {
               signInBtn.style.display = 'none';
@@ -1495,6 +1512,13 @@
               if (!userButtonDiv.hasChildNodes()) {
                 window.Clerk.mountUserButton(userButtonDiv, { appearance: clerkAppearance });
               }
+            } else if (isGuest) {
+              signInBtn.style.display = 'flex';
+              userButtonDiv.style.display = 'none';
+
+              authGuard.style.display = 'none';
+              app.style.filter = 'none';
+              app.style.pointerEvents = 'auto';
             } else {
               signInBtn.style.display = 'flex';
               userButtonDiv.style.display = 'none';
@@ -1517,6 +1541,11 @@
 
           document.getElementById('guard-sign-up-btn').onclick = () => {
             window.Clerk.openSignUp({ appearance: clerkAppearance });
+          };
+
+          document.getElementById('guard-guest-btn').onclick = () => {
+            localStorage.setItem('isGuest', 'true');
+            refreshUI();
           };
 
           // Listen for sign-in/out events
