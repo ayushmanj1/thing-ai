@@ -29,6 +29,11 @@
 
   <!-- Manifest Link -->
   <link rel="manifest" href="/manifest.json">
+  <script>
+    if (localStorage.getItem('theme') === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  </script>
 
   <style>
     *,
@@ -55,6 +60,18 @@
       --red-glow: rgba(239, 68, 68, 0.3);
     }
 
+    [data-theme="light"] {
+      --bg: #fafafa;
+      --surface: #ffffff;
+      --surface2: #f4f4f5;
+      --border: rgba(0, 0, 0, 0.1);
+      --text: #171717;
+      --muted: #737373;
+      --you-bg: #f4f4f5;
+      --ai-bg: #ffffff;
+      --glow: rgba(250, 204, 21, 0.3);
+    }
+
     html,
     body {
       height: 100%;
@@ -73,8 +90,15 @@
       background:
         radial-gradient(ellipse 60% 55% at 75% 15%, rgba(250, 204, 21, 0.04) 0%, transparent 70%),
         radial-gradient(ellipse 50% 40% at 15% 85%, rgba(250, 204, 21, 0.03) 0%, transparent 70%),
-        linear-gradient(160deg, #050505 0%, #111111 100%);
+        linear-gradient(160deg, var(--bg) 0%, var(--surface) 100%);
       pointer-events: none;
+    }
+
+    [data-theme="light"] body::before {
+      background:
+        radial-gradient(ellipse 60% 55% at 75% 15%, rgba(250, 204, 21, 0.08) 0%, transparent 70%),
+        radial-gradient(ellipse 50% 40% at 15% 85%, rgba(250, 204, 21, 0.06) 0%, transparent 70%),
+        linear-gradient(160deg, var(--bg) 0%, var(--surface) 100%);
     }
 
     #app {
@@ -205,7 +229,7 @@
       overflow: hidden;
     }
 
-    #clear-btn::after {
+    #settings-btn::after {
       content: '';
       position: absolute;
       top: 0;
@@ -216,25 +240,23 @@
       transition: all 0.6s ease;
     }
 
-    #clear-btn {
+    #settings-btn {
       background: var(--accent);
       border-color: var(--accent);
       color: #000;
       box-shadow: 0 0 15px var(--glow);
     }
 
-    #clear-btn:hover {
+    #settings-btn:hover {
+      background: var(--accent);
+      color: #000;
       filter: brightness(1.1);
       transform: scale(1.05);
       box-shadow: 0 0 25px var(--glow);
     }
 
-    #clear-btn:active {
-      background: var(--red);
-      border-color: var(--red);
-      color: #fff;
+    #settings-btn:active {
       transform: scale(0.9);
-      box-shadow: 0 0 30px var(--red-glow);
       transition: all 0.1s;
     }
 
@@ -1234,6 +1256,138 @@
       }
     }
 
+    /* ── Settings Modal ── */
+    #settings-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    #settings-modal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .settings-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      width: 100%;
+      max-width: 500px;
+      padding: 32px;
+      position: relative;
+      transform: translateY(20px);
+      transition: transform 0.3s ease;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+
+    #settings-modal.active .settings-container {
+      transform: translateY(0);
+    }
+
+    .settings-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 8px;
+    }
+
+    .settings-close:hover {
+      color: var(--text);
+    }
+
+    .settings-header {
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .settings-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+    }
+
+    .settings-options {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--surface2);
+      padding: 16px 20px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+    }
+
+    .setting-info h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .setting-info p {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .setting-btn {
+      padding: 10px 20px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .setting-btn.theme-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    
+    .setting-btn.theme-btn:hover {
+      background: var(--border);
+    }
+
+    .setting-btn.danger-btn {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .setting-btn.danger-btn:hover {
+      background: var(--red);
+      color: #fff;
+    }
+
+    .setting-btn.premium-btn {
+      background: var(--accent);
+      color: #000;
+    }
+
+    .setting-btn.premium-btn:hover {
+      filter: brightness(1.1);
+      transform: translateY(-2px);
+    }
   </style>
 </head>
 
@@ -1248,6 +1402,47 @@
         <button id="guard-sign-up-btn">Sign Up to Use</button>
         <button id="guard-sign-in-btn">Sign In</button>
         <button id="guard-guest-btn">Stay logged out and use</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settings-modal">
+    <div class="settings-container">
+      <button class="settings-close" id="settings-close">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      <div class="settings-header">
+        <h2 class="settings-title">Settings</h2>
+      </div>
+      
+      <div class="settings-options">
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3>Theme</h3>
+            <p>Switch between dark and light mode.</p>
+          </div>
+          <button id="theme-toggle-btn" class="setting-btn theme-btn">Light Mode</button>
+        </div>
+        
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3>Clear Chat</h3>
+            <p>Delete all current messages in this session.</p>
+          </div>
+          <button id="modal-clear-btn" class="setting-btn danger-btn">Clear Chat</button>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-info">
+            <h3>Upgrade Plan</h3>
+            <p>Unlock advanced features and priority models.</p>
+          </div>
+          <button id="modal-premium-btn" class="setting-btn premium-btn">View Plans</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1331,13 +1526,19 @@
           </button>
           <div id="user-button"></div>
         </div>
-        <button class="icon-btn premium-upgrade-btn" id="premium-btn" title="View Plans">
+        <button class="icon-btn premium-upgrade-btn" id="premium-btn" title="View Plans" style="display: none;">
           Upgrade
         </button>
-        <button class="icon-btn" id="clear-btn" title="Clear Chat (Privacy Mode)">
+        <button class="icon-btn" id="clear-btn" title="Clear Chat (Privacy Mode)" style="display: none;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="3 6 5 6 21 6"></polyline>
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
+        <button class="icon-btn" id="settings-btn" title="Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
           </svg>
         </button>
       </div>
@@ -2196,6 +2397,66 @@
     window.addEventListener('beforeunload', () => {
       navigator.sendBeacon(INTERRUPT_URL);
     });
+
+    // ── Settings & Theme Integration ──
+    const settingsBtn = document.getElementById('settings-btn');
+    const settingsModal = document.getElementById('settings-modal');
+    const settingsClose = document.getElementById('settings-close');
+    const themeBtn = document.getElementById('theme-toggle-btn');
+    const modalClearBtn = document.getElementById('modal-clear-btn');
+    const modalPremiumBtn = document.getElementById('modal-premium-btn');
+
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', () => {
+        settingsModal.classList.add('active');
+      });
+    }
+
+    if (settingsClose) {
+      settingsClose.addEventListener('click', () => {
+        settingsModal.classList.remove('active');
+      });
+    }
+
+    if (themeBtn) {
+      if (localStorage.getItem('theme') === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+        themeBtn.innerText = 'Dark Mode';
+      }
+      
+      themeBtn.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'light') {
+          document.documentElement.removeAttribute('data-theme');
+          themeBtn.innerText = 'Light Mode';
+          localStorage.setItem('theme', 'dark');
+        } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+          themeBtn.innerText = 'Dark Mode';
+          localStorage.setItem('theme', 'light');
+        }
+      });
+    }
+
+    if (modalClearBtn) {
+      modalClearBtn.addEventListener('click', async () => {
+        if (!confirm("Are you sure you want to clear the chat history?")) return;
+        try {
+          await fetch('/clear', { method: 'POST' });
+          document.getElementById('messages').innerHTML = '';
+          location.reload();
+        } catch(e) {
+          alert("Failed to clear chat");
+        }
+      });
+    }
+
+    if (modalPremiumBtn) {
+      modalPremiumBtn.addEventListener('click', () => {
+        settingsModal.classList.remove('active');
+        document.getElementById('pricing-modal').classList.add('active');
+      });
+    }
     // ── Razorpay Integration ──
     const premiumBtn = document.getElementById('premium-btn');
     const pricingModal = document.getElementById('pricing-modal');
